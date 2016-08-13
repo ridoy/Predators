@@ -8,17 +8,17 @@
  * Jake Vollkommer (https://github.com/jakevollkommer)
  */
 
-var app     = require('express')(),
+var express = require('express'),
+    app     = express(),
     http    = require('http').Server(app),
     io      = require('socket.io')(http),
     uuid    = require('node-uuid'),
-    port    = process.env.PREDATORS_PORT || 3000; // Configure port
+    path    = require('path'),
+    port    = process.env.PREDATORS_PORT || 4000; // Configure port
 
-app.get('/', function(req,res) {
-  res.sendFile('index.html');
-});
+app.use(express.static('public'));
 
-io.on('connection', function(client) {
+io.on('connection', (client) => {
   console.log('New friend connected!');
 
   // Generate unique ID for this client
@@ -29,8 +29,12 @@ io.on('connection', function(client) {
     id: client.id
   });
 
-});
+  client.on('test', (obj) => {
+    console.log(JSON.stringify(obj));
+  })
 
-http.listen(port, function() {
-  console.log('Listening on port ' + port);
-});
+})
+
+http.listen(port, () => {
+  console.log('Listening on ' + port)
+})

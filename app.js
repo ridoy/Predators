@@ -2,11 +2,15 @@
  * PREDATORS
  * Online Multiplayer Game
  *
+ * app.js
+ *
  * AUTHORS
  * Ridoy Majumdar (https://github.com/ridoymajumdar)
  * Matthew Violet (https://github.com/mattviolet)
  * Jake Vollkommer (https://github.com/jakevollkommer)
  */
+
+// TODO implement max_users
 
 var express = require('express'),
     app     = express(),
@@ -14,11 +18,14 @@ var express = require('express'),
     io      = require('socket.io')(http),
     uuid    = require('node-uuid'),
     path    = require('path'),
+    core    = require('./public/core/predators.js');
     port    = process.env.PREDATORS_PORT || 4000; // Configure port
+
+var game = new PredatorsCore();
 
 app.use(express.static('public'));
 
-io.on('connection', (client) => {
+io.on('connection', function(client) {
   console.log('New friend connected!');
 
   // Generate unique ID for this client
@@ -29,12 +36,8 @@ io.on('connection', (client) => {
     id: client.id
   });
 
-  client.on('test', (obj) => {
-    console.log(JSON.stringify(obj));
-  })
-
 })
 
-http.listen(port, () => {
+http.listen(port, function() {
   console.log('Listening on ' + port)
 })

@@ -1,7 +1,20 @@
-var socket = io();
+/*
+ * PREDATORS
+ * Online Multiplayer Game
+ *
+ * game-client.js
+ *
+ * AUTHORS
+ * Ridoy Majumdar (https://github.com/ridoymajumdar)
+ * Matthew Violet (https://github.com/mattviolet)
+ * Jake Vollkommer (https://github.com/jakevollkommer)
+ */
 
 window.onload = function() {
-  var instance = new game();
-  // Start game loop
+  var game = new PredatorsCore();
+  console.log(game);
+  game.clientConnect();
+  game.update();
+  
 };
 

@@ -26,17 +26,59 @@ var game = new PredatorsCore();
 app.use(express.static('public'));
 
 io.on('connection', function(client) {
-  console.log('New friend connected!');
+    console.log('New friend connected!');
 
-  // Generate unique ID for this client
-  client.id = uuid.v1();
+    // Generate unique ID for this client
+    client.id = uuid.v1();
 
-  // Let this client know their ID
-  client.emit('onconnected', {
-    id: client.id
-  });
+    game.players.push({
+        id: client.id,
+        x: 0,
+        y: 0,
+        theta: 0
+    });
 
+    // Send this player their id and a list of players
+    client.emit('connected', {
+        id: client.id,
+        players: game.players
+    });
+
+    client.on('clientStateUpdate', function(msg) {
+        var player = game.findPlayer(msg.id);
+        if (player) {
+            player.theta = msg.theta;
+        }
+    });
+
+    function updateAllClients() {
+        client.emit('serverUpdate', {
+            players: game.players
+        });
+    }
+
+    setInterval(updateAllClients, 100);
 })
+
+// TODO move this to core?
+function clientPhysicsUpdate() {
+    game.players = game.players.map(function(player) {
+        var x = player.x;
+        var y = player.y;
+        console.log(game.speedMult);
+
+        x += Math.cos(player.theta) * game.speedMult;
+        y -= Math.sin(player.theta) * game.speedMult;
+
+        player.x = x;
+        player.y = y;
+
+        return player;
+    });
+    console.log(game.players);
+}
+
+setInterval(clientPhysicsUpdate, 16);
 
 http.listen(port, function() {
   console.log('Listening on ' + port)

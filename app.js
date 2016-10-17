@@ -35,7 +35,7 @@ io.on('connection', function(client) {
         id: client.id,
         x: 0,
         y: 0,
-        theta: 0
+        keysDown: {}
     });
 
     // Send this player their id and a list of players
@@ -47,7 +47,7 @@ io.on('connection', function(client) {
     client.on('clientStateUpdate', function(msg) {
         var player = game.findPlayer(msg.id);
         if (player) {
-            player.theta = msg.theta;
+            player.keysDown = msg.keysDown;
         }
     });
 
@@ -71,13 +71,15 @@ io.on('connection', function(client) {
 
 // TODO move this to core?
 function clientPhysicsUpdate() {
+    // how do i do this computation in parallel? Prob negligible difference that I *can* take into account anyway
     game.players = game.players.map(function(player) {
         var x = player.x;
         var y = player.y;
 
-        console.log(player.theta);
-        x += Math.cos(player.theta) * game.speedMult;
-        y -= Math.sin(player.theta) * game.speedMult;
+        if (player.keysDown.right) x += 1;
+        if (player.keysDown.left)  x -= 1;
+        if (player.keysDown.up)    y -= 1;
+        if (player.keysDown.down)  y += 1;
 
         player.x = x;
         player.y = y;

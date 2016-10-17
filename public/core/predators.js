@@ -14,7 +14,6 @@ var debug = true;
 
 var PredatorsCore = function() {
     this.players    = [];
-    this.speedMult  = .1;
 };
 
 // Set game variables and listeners when client connects
@@ -22,7 +21,8 @@ PredatorsCore.prototype.clientConnect = function() {
     var $this = this;
 
     this.socket        = io();
-    this.position      = { x: 0, y: 0, theta: 0 };
+    this.x             = 0;
+    this.y             = 0;
     this.keysDown      = { right: false, left: false, up: false, down: false };
     this.canvas        = $('#view')[0];
     this.canvas.width  = $(window).width();
@@ -45,22 +45,9 @@ PredatorsCore.prototype.clientConnect = function() {
 
         // Update local position
         var thisPlayer = this.findPlayer(this.id);
-        this.position.x = thisPlayer.x;
-        this.position.y = thisPlayer.y;
+        this.x = thisPlayer.x;
+        this.y = thisPlayer.y;
     });
-
-    // Handle player following mouse
-    /*
-    $(window).mousemove((e) => {
-        var centerX = $(window).width() / 2;
-        var centerY = $(window).height() / 2;
-        var theta   = Math.atan2(e.clientY - centerY, e.clientX - centerX); 
-
-
-        $this.position.theta = theta;
-        $this.sendClientStateToServer();
-    });
-    */
 
     // Handle keyboard input
     $(window).keydown((e) => {
@@ -77,7 +64,11 @@ PredatorsCore.prototype.clientConnect = function() {
             $this.keysDown.right = true;
         } else if (key === 40) {
             $this.keysDown.down  = true;
+        } else {
+            return; // don't send client state to server
         }
+
+        this.sendClientStateToServer();
 
         // if do anything else return
         // is there a more effective way to store these....
@@ -85,7 +76,7 @@ PredatorsCore.prototype.clientConnect = function() {
     });
 
     // Handle user releasing key -- no longer apply movement in that direciton
-    $(window).keydown((e) => {
+    $(window).keyup((e) => {
         var key = e.keyCode;
         if (key === 37) {
             $this.keysDown.left  = false;
@@ -95,7 +86,11 @@ PredatorsCore.prototype.clientConnect = function() {
             $this.keysDown.right = false;
         } else if (key === 40) {
             $this.keysDown.down  = false;
+        } else {
+            return; // don't send client state to server
         }
+
+        this.sendClientStateToServer();
     });
 
     // Handle when user resizes window
@@ -117,16 +112,16 @@ PredatorsCore.prototype.findPlayer = function(id) {
 PredatorsCore.prototype.sendClientStateToServer = function() {
     this.socket.emit('clientStateUpdate', {
         id: this.id,
-        localX: this.position.x,
-        localY: this.position.y,
-        theta: this.position.theta
+        localX: this.x,
+        localY: this.y,
+        keysDown: this.keysDown
     });
 };
 
 // FOR DEBUG: Print x and y of current player in topleft corner
 PredatorsCore.prototype.updateStatsConsole = function() {
     if (debug) {
-        var str = "x: " + Math.round(this.position.x) + ", y: " + Math.round(this.position.y);
+        var str = "x: " + Math.round(this.x) + ", y: " + Math.round(this.y);
         this.ctx.fillStyle = "blue";
         this.ctx.font = "12px Times";
         this.ctx.fillText(str, 10, 10);
@@ -135,14 +130,16 @@ PredatorsCore.prototype.updateStatsConsole = function() {
 
 // Update position of client
 PredatorsCore.prototype.clientUpdate = function() {
-    var x = this.position.x;
-    var y = this.position.y;
+    var x = this.x;
+    var y = this.y;
 
-    x += Math.cos(this.position.theta) * this.speedMult;
-    y -= Math.sin(this.position.theta) * this.speedMult;
+    if (this.keysDown.right) x += 1;
+    if (this.keysDown.left)  x -= 1;
+    if (this.keysDown.up)    y -= 1;
+    if (this.keysDown.down)  y += 1;
 
-    this.position.x = x;
-    this.position.y = y;
+    this.x = x;
+    this.y = y;
     this.updateStatsConsole();
     this.draw();
 };
@@ -170,8 +167,8 @@ PredatorsCore.prototype.drawPlayers = function() {
 
     for (var player of this.players) {
         if (player.id !== this.id) { // Don't draw self twice
-            var distX = player.x - this.position.x;
-            var distY = player.y - this.position.y;
+            var distX = player.x - this.x;
+            var distY = player.y - this.y;
 
             // Draw player if within window
             if (Math.abs(distX) <= centerX && Math.abs(distY) <= centerY) {
@@ -186,8 +183,8 @@ PredatorsCore.prototype.drawPlayers = function() {
 PredatorsCore.prototype.drawBackground = function() {
     var x = -1 * (this.bg.width - this.canvas.width) / 2;
     var y = -1 * (this.bg.height - this.canvas.height) / 2;
-    x -= this.position.x;
-    y += this.position.y;
+    x -= this.x;
+    y -= this.y;
     this.ctx.drawImage(this.bg, x, y);
 };
 

@@ -51,6 +51,15 @@ io.on('connection', function(client) {
         }
     });
 
+    client.on('disconnect', function() {
+        for (var i = 0; i < game.players.length; i++) {
+            if (game.players[i].id === client.id) {
+                game.players.splice(i, 1);
+                return;
+            }
+        }
+    });
+
     function updateAllClients() {
         client.emit('serverUpdate', {
             players: game.players
@@ -65,8 +74,8 @@ function clientPhysicsUpdate() {
     game.players = game.players.map(function(player) {
         var x = player.x;
         var y = player.y;
-        console.log(game.speedMult);
 
+        console.log(player.theta);
         x += Math.cos(player.theta) * game.speedMult;
         y -= Math.sin(player.theta) * game.speedMult;
 

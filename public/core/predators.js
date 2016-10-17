@@ -50,7 +50,6 @@ PredatorsCore.prototype.clientConnect = function() {
     });
 
     // Handle player following mouse
-    /*
     $(window).mousemove((e) => {
         var centerX = $(window).width() / 2;
         var centerY = $(window).height() / 2;
@@ -59,43 +58,6 @@ PredatorsCore.prototype.clientConnect = function() {
 
         $this.position.theta = theta;
         $this.sendClientStateToServer();
-    });
-    */
-
-    // Handle keyboard input
-    $(window).keydown((e) => {
-        // jQuery used so ubiquitiously it makes little sense to have it loaded for each site
-        // of course jQuery is tiny and so this difference is negligible but my point is...
-        // maybe browsers can just come with jQuery... and developers can access it via window.jQuery
-        // Anyway, self-rant over, here's some code...
-        var key = e.keyCode;
-        if (key === 37) {
-            $this.keysDown.left  = true;
-        } else if (key === 38) {
-            $this.keysDown.up    = true;
-        } else if (key === 39) {
-            $this.keysDown.right = true;
-        } else if (key === 40) {
-            $this.keysDown.down  = true;
-        }
-
-        // if do anything else return
-        // is there a more effective way to store these....
-        // i guess i should optimize later and focus on what's important
-    });
-
-    // Handle user releasing key -- no longer apply movement in that direciton
-    $(window).keydown((e) => {
-        var key = e.keyCode;
-        if (key === 37) {
-            $this.keysDown.left  = false;
-        } else if (key === 38) {
-            $this.keysDown.up    = false;
-        } else if (key === 39) {
-            $this.keysDown.right = false;
-        } else if (key === 40) {
-            $this.keysDown.down  = false;
-        }
     });
 
     // Handle when user resizes window

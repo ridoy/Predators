@@ -19,6 +19,15 @@ var PredatorsCore = function() {
     // Performance settings
     this.interpolationDelay = 100; // 100ms
     this.bufferSize         = 12;
+    this.arenaWidth         = 2032;
+    this.arenaHeight        = 2032;
+};
+
+PredatorsCore.prototype.isWithinBoundaries = function(x, y) {
+    var xValid = -1 * (this.arenaHeight / 2) < x && x < this.arenaHeight / 2
+    var yValid = -1 * (this.arenaWidth / 2) < y && y < this.arenaWidth / 2
+
+    return xValid && yValid;
 };
 
 // Set game variables and listeners when client connects
@@ -56,25 +65,11 @@ PredatorsCore.prototype.clientConnect = function() {
             this.serverSnapshots.splice(0, 1);
         }
 
-        // Update local position
+        // Update local position if different from server's record
         var thisPlayer = this.findPlayer(this.id);
         this.x = thisPlayer.x;
         this.y = thisPlayer.y;
     });
-
-    function getDirection(key) {
-        if (key === 37) {
-            return 'left';
-        } else if (key === 38) {
-            return 'up';
-        } else if (key === 39) {
-            return 'right';
-        } else if (key === 40) {
-            return 'down';
-        } else {
-            return false;
-        }
-    }
 
     // Handle keyboard input
     $(window).keydown((e) => {
@@ -101,6 +96,20 @@ PredatorsCore.prototype.clientConnect = function() {
         $this.canvas.width  = $(window).width();
         $this.canvas.height = $(window).height();
     });
+
+    function getDirection(key) {
+        if (key === 37) {
+            return 'left';
+        } else if (key === 38) {
+            return 'up';
+        } else if (key === 39) {
+            return 'right';
+        } else if (key === 40) {
+            return 'down';
+        } else {
+            return false;
+        }
+    }
 };
 
 // Lerp (linear interpolation) function
@@ -153,8 +162,10 @@ PredatorsCore.prototype.clientUpdate = function() {
     if (this.keysDown.up)    y -= 1;
     if (this.keysDown.down)  y += 1;
 
-    this.x = x;
-    this.y = y;
+    if (this.isWithinBoundaries(x, y)) {
+        this.x = x;
+        this.y = y;
+    }
     this.updateStatsConsole();
     this.draw();
 };
@@ -173,6 +184,7 @@ PredatorsCore.prototype.draw = function() {
 };
 
 PredatorsCore.prototype.drawPlayers = function() {
+    // Find server positions to interpolate between
     var renderTime = this.clientTime - this.interpolationDelay;
     var prevSnapshot = null;
     var nextSnapshot = null;
@@ -192,6 +204,8 @@ PredatorsCore.prototype.drawPlayers = function() {
         return;
     }
 
+    // Update this.players with interpolated positions
+    // TODO This can probably be done better
     var players = [];
     for (var i = 0; i < prevSnapshot.players.length; i++) {
         // Skip if current player
@@ -221,6 +235,7 @@ PredatorsCore.prototype.drawPlayers = function() {
     this.ctx.arc(centerX, centerY, 3, 0, 2*Math.PI);
     this.ctx.stroke();
 
+    // Draw other players
     for (var player of this.players) {
         if (player.id !== this.id) { // Don't draw self twice
             var distX = player.x - this.x;

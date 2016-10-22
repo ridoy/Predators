@@ -81,8 +81,10 @@ function clientPhysicsUpdate() {
         if (player.keysDown.up)    y -= 1;
         if (player.keysDown.down)  y += 1;
 
-        player.x = x;
-        player.y = y;
+        if (game.isWithinBoundaries(x, y)) {
+            player.x = x;
+            player.y = y;
+        }
 
         return player;
     });

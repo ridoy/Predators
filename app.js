@@ -10,23 +10,40 @@
  * Jake Vollkommer (https://github.com/jakevollkommer)
  */
 
-// TODO implement max_users
-
+// Imports
 var express = require('express'),
     app     = express(),
-    http    = require('http').Server(app),
+    request = require('request'),
+    http    = require('http'),
     io      = require('socket.io')(http),
     uuid    = require('node-uuid'),
     path    = require('path'),
+    config  = require('./config/config.js');
     core    = require('./public/core/predators.js');
-    port    = process.env.PREDATORS_PORT || 4000; // Configure port
+
+// Server settings.
+// Adjust these to your preference in config/config.js
+var port     = config.port;
+    maxUsers = config.maxUsers; 
 
 var game = new PredatorsCore();
 
 app.use(express.static('public'));
 
+app.get('/', function(req, res) {
+    var url = req.protocol + '://' + req.get('host') + req.originalUrl;
+
+    res.send({"url": url});
+});
+
+app.listen(port, function() {
+  console.log('Listening on ' + port)
+})
+
 io.on('connection', function(client) {
     console.log('New friend connected!');
+    console.log('Players online:');
+    console.log(game.players);
 
     // Generate unique ID for this client
     client.id = uuid.v1();
@@ -88,11 +105,11 @@ function clientPhysicsUpdate() {
 
         return player;
     });
-    console.log(game.players);
 }
 
 setInterval(clientPhysicsUpdate, 15);
 
-http.listen(port, function() {
-  console.log('Listening on ' + port)
-})
+// Ping the main server.
+// This allows your server to be listed on the list of all avaiable servers.
+request.post(config.mainPredatorsHost + '/serverlist', {form: {}}, function(err, response, body) {
+});

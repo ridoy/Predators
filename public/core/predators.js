@@ -10,8 +10,6 @@
  * Jake Vollkommer (https://github.com/jakevollkommer)
  */
 
-var debug = true;
-
 var PredatorsCore = function() {
     this.players            = [];
     this.serverSnapshots    = [];
@@ -23,29 +21,29 @@ var PredatorsCore = function() {
     this.arenaHeight        = 2032;
 };
 
-PredatorsCore.prototype.isWithinBoundaries = function(x, y) {
-    var xValid = -1 * (this.arenaHeight / 2) < x && x < this.arenaHeight / 2
-    var yValid = -1 * (this.arenaWidth / 2) < y && y < this.arenaWidth / 2
-
-    return xValid && yValid;
-};
-
 // Set game variables and listeners when client connects
 PredatorsCore.prototype.clientConnect = function() {
     var $this = this;
 
-    this.socket        = io();
-    this.clientTime    = Date.now();
-    this.x             = 0;
-    this.y             = 0;
-    this.keysDown      = { right: false, left: false, up: false, down: false };
+    // Set up client data
+    this.clientTime = Date.now();
+    this.keysDown   = { right: false, left: false, up: false, down: false };
+    this.x          = 0;
+    this.y          = 0;
+    this.id;
+
+    // Set up view
     this.canvas        = $('#view')[0];
     this.canvas.width  = $(window).width();
     this.canvas.height = $(window).height();
     this.ctx           = this.canvas.getContext('2d');
     this.bg            = new Image();
     this.bg.src        = '/img/grid.png';
-    this.id;
+
+    // Connect to remote server
+    var queryParams = getQueryParamsFromUrl();
+    this.serverUrl  = queryParams['serverUrl'];
+    this.socket     = io(serverUrl);
 
     // Handle connection to game server
     this.socket.on('connected', (msg) => {
@@ -73,7 +71,7 @@ PredatorsCore.prototype.clientConnect = function() {
 
     // Handle keyboard input
     $(window).keydown((e) => {
-        var direction = getDirection(e.keyCode);
+        var direction = $this.getDirectionFromKey(e.keyCode);
 
         if (direction) {
             $this.keysDown[direction] = true;
@@ -83,7 +81,7 @@ PredatorsCore.prototype.clientConnect = function() {
 
     // Handle user releasing key -- no longer apply movement in that direciton
     $(window).keyup((e) => {
-        var direction = getDirection(e.keyCode);
+        var direction = $this.getDirectionFromKey(e.keyCode);
 
         if (direction) {
             $this.keysDown[direction] = false;
@@ -97,40 +95,6 @@ PredatorsCore.prototype.clientConnect = function() {
         $this.canvas.height = $(window).height();
     });
 
-    function getDirection(key) {
-        if (key === 37) {
-            return 'left';
-        } else if (key === 38) {
-            return 'up';
-        } else if (key === 39) {
-            return 'right';
-        } else if (key === 40) {
-            return 'down';
-        } else {
-            return false;
-        }
-    }
-};
-
-// Lerp (linear interpolation) function
-// Takes in previous and next vectors, and time
-PredatorsCore.prototype.lerp = function(prev, next, t) {
-    // Validate 0 < t < 1
-    var _t = (t < 0) ? 0 : ((t > 1) ? 1 : t.fixed());
-
-    return {
-        x: prev.x + _t * (next.x - prev.x),
-        y: prev.y + _t * (next.y - prev.y)
-    }
-};
-
-PredatorsCore.prototype.findPlayer = function(id) {
-    for (var i = 0; i < this.players.length; i++) {
-        if (this.players[i].id === id) {
-            return this.players[i];
-        }
-    }
-    return null;
 };
 
 PredatorsCore.prototype.sendClientStateToServer = function() {
@@ -140,16 +104,6 @@ PredatorsCore.prototype.sendClientStateToServer = function() {
         localY: this.y,
         keysDown: this.keysDown
     });
-};
-
-// FOR DEBUG: Print x and y of current player in topleft corner
-PredatorsCore.prototype.updateStatsConsole = function() {
-    if (debug) {
-        var str = "x: " + Math.round(this.x) + ", y: " + Math.round(this.y);
-        this.ctx.fillStyle = "blue";
-        this.ctx.font = "12px Times";
-        this.ctx.fillText(str, 10, 10);
-    }
 };
 
 // Calculate client's position locally
@@ -166,7 +120,7 @@ PredatorsCore.prototype.clientUpdate = function() {
         this.x = x;
         this.y = y;
     }
-    this.updateStatsConsole();
+
     this.draw();
 };
 
@@ -259,8 +213,91 @@ PredatorsCore.prototype.drawBackground = function() {
     this.ctx.drawImage(this.bg, x, y);
 };
 
+/*
+ * Utility functions
+ */
+
+/*
+ * Grab query params from URL
+ * params: none
+ * return: an object containing key/value params from url
+ */
+PredatorsCore.prototype.getQueryParamsFromURL = function() {
+    var queryString  = location.search;
+    var splitQS      = queryString.split('&');
+    var params       = {};
+    for (var i = 0; i < splitQS; i++) {
+        var keyValuePair = splitQS.split('='); 
+        params[keyValuePair[0]] = keyValuePair[1];
+    }
+    return params;
+};
+
+/*
+ * Arrow key keycode to direction string
+ * params: key (code of key pressed)
+ * return: if arrow key, String of arrow key, else false
+ */
+PredatorsCore.prototype.getDirectionFromKey = function(key) {
+    if (key === 37) {
+        return 'left';
+    } else if (key === 38) {
+        return 'up';
+    } else if (key === 39) {
+        return 'right';
+    } else if (key === 40) {
+        return 'down';
+    } else {
+        return false;
+    }
+};
+
+/*
+ * Linear interpolation between two vectors
+ * params: v1 (first/previous vector)
+ *         v2 (second/next vector)
+ *         t  (length of timestep)
+ * return: Position between v1 and v2
+ */
+PredatorsCore.prototype.lerp = function(v1, v2, t) {
+    // Validate 0 < t < 1
+    var _t = (t < 0) ? 0 : ((t > 1) ? 1 : t.fixed());
+
+    return {
+        x: v1.x + _t * (v2.x - v1.x),
+        y: v1.y + _t * (v2.y - v1.y)
+    }
+};
+
+/*
+ * Check if position is within boundaries
+ * params: x (x coordinate)
+ *         y (y coordinate)
+ * return: true if legal false if illegal
+ */
+PredatorsCore.prototype.isWithinBoundaries = function(x, y) {
+    var xValid = -1 * (this.arenaHeight / 2) < x && x < this.arenaHeight / 2
+    var yValid = -1 * (this.arenaWidth / 2) < y && y < this.arenaWidth / 2
+
+    return xValid && yValid;
+};
+
+/*
+ * Finds player by id
+ * params: id (id of target player)
+ * return: target player if player exists, else null
+ */
+PredatorsCore.prototype.findPlayer = function(id) {
+    for (var i = 0; i < this.players.length; i++) {
+        if (this.players[i].id === id) {
+            return this.players[i];
+        }
+    }
+    return null;
+};
 
 // If on server, allow core to be require-able
 if('undefined' != typeof global) {
     module.exports = global.PredatorsCore = PredatorsCore;
 }
+

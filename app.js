@@ -62,16 +62,16 @@ io.on('connection', function(client) {
 
     function updateAllClients() {
         client.emit('serverUpdate', {
-            players: game.players
+            players: game.players,
+            time:    Date.now()
         });
     }
 
-    setInterval(updateAllClients, 100);
+    setInterval(updateAllClients, 45);
 })
 
 // TODO move this to core?
 function clientPhysicsUpdate() {
-    // how do i do this computation in parallel? Prob negligible difference that I *can* take into account anyway
     game.players = game.players.map(function(player) {
         var x = player.x;
         var y = player.y;
@@ -89,7 +89,7 @@ function clientPhysicsUpdate() {
     console.log(game.players);
 }
 
-setInterval(clientPhysicsUpdate, 16);
+setInterval(clientPhysicsUpdate, 15);
 
 http.listen(port, function() {
   console.log('Listening on ' + port)

@@ -13,7 +13,12 @@
 var debug = true;
 
 var PredatorsCore = function() {
-    this.players    = [];
+    this.players            = [];
+    this.serverSnapshots    = [];
+
+    // Performance settings
+    this.interpolationDelay = 100; // 100ms
+    this.bufferSize         = 12;
 };
 
 // Set game variables and listeners when client connects
@@ -21,6 +26,7 @@ PredatorsCore.prototype.clientConnect = function() {
     var $this = this;
 
     this.socket        = io();
+    this.clientTime    = Date.now();
     this.x             = 0;
     this.y             = 0;
     this.keysDown      = { right: false, left: false, up: false, down: false };
@@ -42,6 +48,13 @@ PredatorsCore.prototype.clientConnect = function() {
     this.socket.on('serverUpdate', (msg) => {
         // Update positions of other players
         this.players = msg.players;
+        this.serverSnapshots.push(msg);
+        this.clientTime = msg.time;
+
+        // Discard oldest server update
+        if (this.serverSnapshots.length > this.bufferSize) {
+            this.serverSnapshots.splice(0, 1);
+        }
 
         // Update local position
         var thisPlayer = this.findPlayer(this.id);
@@ -49,48 +62,38 @@ PredatorsCore.prototype.clientConnect = function() {
         this.y = thisPlayer.y;
     });
 
+    function getDirection(key) {
+        if (key === 37) {
+            return 'left';
+        } else if (key === 38) {
+            return 'up';
+        } else if (key === 39) {
+            return 'right';
+        } else if (key === 40) {
+            return 'down';
+        } else {
+            return false;
+        }
+    }
+
     // Handle keyboard input
     $(window).keydown((e) => {
-        // jQuery used so ubiquitiously it makes little sense to have it loaded for each site
-        // of course jQuery is tiny and so this difference is negligible but my point is...
-        // maybe browsers can just come with jQuery... and developers can access it via window.jQuery
-        // Anyway, self-rant over, here's some code...
-        var key = e.keyCode;
-        if (key === 37) {
-            $this.keysDown.left  = true;
-        } else if (key === 38) {
-            $this.keysDown.up    = true;
-        } else if (key === 39) {
-            $this.keysDown.right = true;
-        } else if (key === 40) {
-            $this.keysDown.down  = true;
-        } else {
-            return; // don't send client state to server
+        var direction = getDirection(e.keyCode);
+
+        if (direction) {
+            $this.keysDown[direction] = true;
+            $this.sendClientStateToServer();
         }
-
-        this.sendClientStateToServer();
-
-        // if do anything else return
-        // is there a more effective way to store these....
-        // i guess i should optimize later and focus on what's important
     });
 
     // Handle user releasing key -- no longer apply movement in that direciton
     $(window).keyup((e) => {
-        var key = e.keyCode;
-        if (key === 37) {
-            $this.keysDown.left  = false;
-        } else if (key === 38) {
-            $this.keysDown.up    = false;
-        } else if (key === 39) {
-            $this.keysDown.right = false;
-        } else if (key === 40) {
-            $this.keysDown.down  = false;
-        } else {
-            return; // don't send client state to server
-        }
+        var direction = getDirection(e.keyCode);
 
-        this.sendClientStateToServer();
+        if (direction) {
+            $this.keysDown[direction] = false;
+            $this.sendClientStateToServer();
+        }
     });
 
     // Handle when user resizes window
@@ -98,6 +101,18 @@ PredatorsCore.prototype.clientConnect = function() {
         $this.canvas.width  = $(window).width();
         $this.canvas.height = $(window).height();
     });
+};
+
+// Lerp (linear interpolation) function
+// Takes in previous and next vectors, and time
+PredatorsCore.prototype.lerp = function(prev, next, t) {
+    // Validate 0 < t < 1
+    var _t = (t < 0) ? 0 : ((t > 1) ? 1 : t.fixed());
+
+    return {
+        x: prev.x + _t * (next.x - prev.x),
+        y: prev.y + _t * (next.y - prev.y)
+    }
 };
 
 PredatorsCore.prototype.findPlayer = function(id) {
@@ -128,7 +143,7 @@ PredatorsCore.prototype.updateStatsConsole = function() {
     }
 };
 
-// Update position of client
+// Calculate client's position locally
 PredatorsCore.prototype.clientUpdate = function() {
     var x = this.x;
     var y = this.y;
@@ -158,6 +173,47 @@ PredatorsCore.prototype.draw = function() {
 };
 
 PredatorsCore.prototype.drawPlayers = function() {
+    var renderTime = this.clientTime - this.interpolationDelay;
+    var prevSnapshot = null;
+    var nextSnapshot = null;
+
+    for (var i = 0; i < this.serverSnapshots.length - 1; i++) {
+        var a = this.serverSnapshots[i];
+        var b = this.serverSnapshots[i + 1];
+        
+        if (a.time <= renderTime && renderTime <= b.time) {
+            prevSnapshot = a;
+            nextSnapshot = b;
+            break;
+        }
+    }
+
+    if (!prevSnapshot || !nextSnapshot) {
+        return;
+    }
+
+    var players = [];
+    for (var i = 0; i < prevSnapshot.players.length; i++) {
+        // Skip if current player
+        if (prevSnapshot.players[i].id !== this.id) {
+            var prevVector = {
+                x: prevSnapshot.players[i].x,
+                y: prevSnapshot.players[i].y
+            };
+            var nextVector = {
+                x: nextSnapshot.players[i].x,
+                y: nextSnapshot.players[i].y
+            };
+            var newPosition = this.lerp(prevVector, nextVector, renderTime / (nextSnapshot.time - prevSnapshot.time)); 
+            players.push({
+                x: newPosition.x,
+                y: newPosition.y,
+                id: prevSnapshot.players[i].id,
+                keysDown: prevSnapshot.players[i].keysDown
+            });
+        }
+    }
+
     // Draw self in window center
     var centerX = $(window).width() / 2;
     var centerY = $(window).height() / 2;

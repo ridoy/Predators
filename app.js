@@ -39,9 +39,6 @@ http.listen(port, function() {
 })
 
 io.on('connection', function(client) {
-    console.log('New friend connected!');
-    console.log('Players online:');
-    console.log(game.players);
 
     // Generate unique ID for this client
     client.id = uuid.v1();
@@ -52,6 +49,10 @@ io.on('connection', function(client) {
         y: 0,
         keysDown: {}
     });
+
+    console.log('New friend connected!');
+    console.log('Players online:');
+    console.log(game.players);
 
     // Send this player their id and a list of players
     client.emit('connected', {

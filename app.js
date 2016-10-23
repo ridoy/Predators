@@ -23,8 +23,8 @@ var express = require('express'),
 
 // Server settings.
 // Adjust these to your preference in config/config.js
-var port     = config.port;
-    maxUsers = config.maxUsers; 
+var port       = config.port;
+    maxPlayers = config.maxPlayers; 
 
 var game = new PredatorsCore();
 
@@ -109,5 +109,4 @@ setInterval(clientPhysicsUpdate, 15);
 
 // Ping the main server.
 // This allows your server to be listed on the list of all avaiable servers.
-request.post(config.mainPredatorsHost + '/serverlist', {form: {}}, function(err, response, body) {
-});
+request.post(config.mainPredatorsHost + '/serverlist', {form: { url: config.thisHost, playerCount: game.players.length, maxPlayers: maxPlayers }});

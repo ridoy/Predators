@@ -6,8 +6,8 @@ module.exports = {
 
     maxPlayers: 15,
 
-    thisHost: 'http://35.161.8.128/',
+    thisHost: 'http://35.160.159.22',
     
-    mainPredatorsHost: 'http://88ab0f7e.ngrok.io'
+    mainPredatorsHost: 'http://predators.io'
 
 };

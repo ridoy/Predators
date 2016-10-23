@@ -34,6 +34,16 @@ app.get('/', function(req, res) {
     res.sendFile('index.html');
 });
 
+app.get('/serverinfo', function(req, res) {
+    var data = { 
+        url: config.thisHost,
+        name: config.serverName,
+        playerCount: game.players.length, 
+        maxPlayers: maxPlayers 
+    };
+    res.send(data);
+});
+
 http.listen(port, function() {
   console.log('Listening on ' + port)
 })
@@ -117,4 +127,6 @@ var postData = {
     maxPlayers: maxPlayers 
 };
 
-request.post(config.mainPredatorsHost + '/serverlist', { form: postData });
+request.post(config.mainPredatorsHost + '/serverlist', { form: postData }, function(err, res, body) {
+    if (err) { console.log(err); return; }
+});

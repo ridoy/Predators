@@ -109,4 +109,11 @@ setInterval(clientPhysicsUpdate, 15);
 
 // Ping the main server.
 // This allows your server to be listed on the list of all avaiable servers.
-request.post(config.mainPredatorsHost + '/serverlist', {form: { url: config.thisHost, playerCount: game.players.length, maxPlayers: maxPlayers }});
+var postData = { 
+    url: config.thisHost,
+    name: config.serverName,
+    playerCount: game.players.length, 
+    maxPlayers: maxPlayers 
+};
+
+request.post(config.mainPredatorsHost + '/serverlist', { form: postData });

@@ -1,5 +1,7 @@
 module.exports = {
 
+    serverName: 'New Predators Server',
+
     port: 8080,
 
     maxPlayers: 15,

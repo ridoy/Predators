@@ -1,6 +1,6 @@
 module.exports = {
 
-    port: 4000,
+    port: 8080,
 
     maxUsers: 15,
     

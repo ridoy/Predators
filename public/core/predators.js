@@ -26,6 +26,7 @@ PredatorsCore.prototype.clientConnect = function() {
     var $this = this;
 
     // Set up client data
+    this.socket     = io();
     this.clientTime = Date.now();
     this.keysDown   = { right: false, left: false, up: false, down: false };
     this.x          = 0;
@@ -41,36 +42,35 @@ PredatorsCore.prototype.clientConnect = function() {
     this.bg.src        = '/img/grid.png';
 
     // Connect to remote server
-    var queryParams = getQueryParamsFromUrl();
+    var queryParams = this.getQueryParamsFromURL();
     this.serverUrl  = queryParams['serverUrl'];
-    this.socket     = io(serverUrl);
 
     // Handle connection to game server
-    this.socket.on('connected', (msg) => {
+    this.socket.on('connected', function(msg) {
         $this.id      = msg.id;
         $this.players = msg.players;
     });
 
     // Handle updates from the server
-    this.socket.on('serverUpdate', (msg) => {
+    this.socket.on('serverUpdate', function(msg) {
         // Update positions of other players
-        this.players = msg.players;
-        this.serverSnapshots.push(msg);
-        this.clientTime = msg.time;
+        $this.players = msg.players;
+        $this.serverSnapshots.push(msg);
+        $this.clientTime = msg.time;
 
         // Discard oldest server update
-        if (this.serverSnapshots.length > this.bufferSize) {
-            this.serverSnapshots.splice(0, 1);
+        if ($this.serverSnapshots.length > $this.bufferSize) {
+            $this.serverSnapshots.splice(0, 1);
         }
 
         // Update local position if different from server's record
-        var thisPlayer = this.findPlayer(this.id);
-        this.x = thisPlayer.x;
-        this.y = thisPlayer.y;
+        var thisPlayer = $this.findPlayer($this.id);
+        $this.x = thisPlayer.x;
+        $this.y = thisPlayer.y;
     });
 
     // Handle keyboard input
-    $(window).keydown((e) => {
+    $(window).keydown(function(e) {
         var direction = $this.getDirectionFromKey(e.keyCode);
 
         if (direction) {
@@ -80,7 +80,7 @@ PredatorsCore.prototype.clientConnect = function() {
     });
 
     // Handle user releasing key -- no longer apply movement in that direciton
-    $(window).keyup((e) => {
+    $(window).keyup(function(e) {
         var direction = $this.getDirectionFromKey(e.keyCode);
 
         if (direction) {
@@ -90,7 +90,7 @@ PredatorsCore.prototype.clientConnect = function() {
     });
 
     // Handle when user resizes window
-    $(window).resize(() => {
+    $(window).resize(function() {
         $this.canvas.width  = $(window).width();
         $this.canvas.height = $(window).height();
     });
@@ -190,7 +190,8 @@ PredatorsCore.prototype.drawPlayers = function() {
     this.ctx.stroke();
 
     // Draw other players
-    for (var player of this.players) {
+    for (var i = 0; i < this.players.length; i++) {
+	var player = this.players[i];
         if (player.id !== this.id) { // Don't draw self twice
             var distX = player.x - this.x;
             var distY = player.y - this.y;

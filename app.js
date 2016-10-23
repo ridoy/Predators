@@ -14,7 +14,7 @@
 var express = require('express'),
     app     = express(),
     request = require('request'),
-    http    = require('http'),
+    http    = require('http').Server(app),
     io      = require('socket.io')(http),
     uuid    = require('node-uuid'),
     path    = require('path'),
@@ -31,12 +31,10 @@ var game = new PredatorsCore();
 app.use(express.static('public'));
 
 app.get('/', function(req, res) {
-    var url = req.protocol + '://' + req.get('host') + req.originalUrl;
-
-    res.send({"url": url});
+    res.sendFile('index.html');
 });
 
-app.listen(port, function() {
+http.listen(port, function() {
   console.log('Listening on ' + port)
 })
 

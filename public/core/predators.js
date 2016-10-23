@@ -26,7 +26,6 @@ PredatorsCore.prototype.clientConnect = function() {
     var $this = this;
 
     // Set up client data
-    this.socket     = io();
     this.clientTime = Date.now();
     this.keysDown   = { right: false, left: false, up: false, down: false };
     this.x          = 0;
@@ -43,7 +42,10 @@ PredatorsCore.prototype.clientConnect = function() {
 
     // Connect to remote server
     var queryParams = this.getQueryParamsFromURL();
-    this.serverUrl  = queryParams['serverUrl'];
+    console.log(queryParams);
+    this.serverUrl  = queryParams['url'];
+    console.log(this.serverUrl);
+    this.socket     = io(this.serverUrl);
 
     // Handle connection to game server
     this.socket.on('connected', function(msg) {
@@ -227,8 +229,8 @@ PredatorsCore.prototype.getQueryParamsFromURL = function() {
     var queryString  = location.search;
     var splitQS      = queryString.split('&');
     var params       = {};
-    for (var i = 0; i < splitQS; i++) {
-        var keyValuePair = splitQS.split('='); 
+    for (var i = 0; i < splitQS.length; i++) {
+        var keyValuePair = splitQS[i].split('='); 
         params[keyValuePair[0]] = keyValuePair[1];
     }
     return params;

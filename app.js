@@ -21,7 +21,7 @@ var express = require('express'),
     config  = require('./config/config.js');
     core    = require('./public/core/predators.js');
 
-// Server settings.
+// Server settings
 // Adjust these to your preference in config/config.js
 var port       = config.port;
     maxPlayers = config.maxPlayers; 
@@ -30,24 +30,11 @@ var game = new PredatorsCore();
 
 app.use(express.static('public'));
 
-app.get('/', function(req, res) {
-    res.sendFile('index.html');
-});
-
-app.get('/serverinfo', function(req, res) {
-    var data = { 
-        url: config.thisHost,
-        name: config.serverName,
-        playerCount: game.players.length, 
-        maxPlayers: maxPlayers 
-    };
-    res.send(data);
-});
-
 http.listen(port, function() {
   console.log('Listening on ' + port)
 })
 
+// Multiplayer logic
 io.on('connection', function(client) {
 
     // Generate unique ID for this client
@@ -60,9 +47,7 @@ io.on('connection', function(client) {
         keysDown: {}
     });
 
-    console.log('New friend connected!');
-    console.log('Players online:');
-    console.log(game.players);
+    console.log('New friend connected!\nPlayers online:\n' + game.players);
 
     // Send this player their id and a list of players
     client.emit('connected', {
@@ -70,6 +55,7 @@ io.on('connection', function(client) {
         players: game.players
     });
 
+    // Handle keysDown updates from this player
     client.on('clientStateUpdate', function(msg) {
         var player = game.findPlayer(msg.id);
         if (player) {
@@ -77,6 +63,7 @@ io.on('connection', function(client) {
         }
     });
 
+    // Remove this player from game when disconnected
     client.on('disconnect', function() {
         for (var i = 0; i < game.players.length; i++) {
             if (game.players[i].id === client.id) {
@@ -93,33 +80,12 @@ io.on('connection', function(client) {
         });
     }
 
+    // Send out server's record of positions every 45ms
     setInterval(updateAllClients, 45);
+    // Update all player positions every 15ms
+    setInterval(game.updatePlayerPositions, 15);
 })
 
-// TODO move this to core?
-function clientPhysicsUpdate() {
-    game.players = game.players.map(function(player) {
-        var x = player.x;
-        var y = player.y;
-
-        if (player.keysDown.right) x += 1;
-        if (player.keysDown.left)  x -= 1;
-        if (player.keysDown.up)    y -= 1;
-        if (player.keysDown.down)  y += 1;
-
-        if (game.isWithinBoundaries(x, y)) {
-            player.x = x;
-            player.y = y;
-        }
-
-        return player;
-    });
-}
-
-setInterval(clientPhysicsUpdate, 15);
-
-// Ping the main server.
-// This allows your server to be listed on the list of all avaiable servers.
 var postData = { 
     url: config.thisHost,
     name: config.serverName,
@@ -127,6 +93,21 @@ var postData = {
     maxPlayers: maxPlayers 
 };
 
+// Ping the main server.
+// This allows your server to be listed on the list of all avaiable servers.
 request.post(config.mainPredatorsHost + '/serverlist', { form: postData }, function(err, res, body) {
-    if (err) { console.log(err); return; }
+    if (err) { 
+        console.log('There was an error reaching the server list on http://predators.io :(\n' + err);
+        return;
+    }
+    console.log('Reached main server at http://predators.io/. Your server has been added to the main server list on http://predators.io.');
+});
+
+
+// After initial request to main server, the main server will periodically check on the server at this route.
+// We send back the current number of players online.
+app.get('/serverinfo', function(req, res) {
+    res.send({ 
+        playerCount: game.players.length,
+    });
 });

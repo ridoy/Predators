@@ -21,6 +21,10 @@ var PredatorsCore = function() {
     this.arenaHeight        = 2032;
 };
 
+/*
+ * Client-specific functions
+ */
+
 // Set game variables and listeners when client connects
 PredatorsCore.prototype.clientConnect = function() {
     var $this = this;
@@ -133,10 +137,22 @@ PredatorsCore.prototype.update = function() {
     this.clientUpdate();
 };
 
+/*
+ * Drawing functions
+ */
+
 PredatorsCore.prototype.draw = function() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawBackground();
     this.drawPlayers();
+};
+
+PredatorsCore.prototype.drawBackground = function() {
+    var x = -1 * (this.bg.width - this.canvas.width) / 2;
+    var y = -1 * (this.bg.height - this.canvas.height) / 2;
+    x -= this.x;
+    y -= this.y;
+    this.ctx.drawImage(this.bg, x, y);
 };
 
 PredatorsCore.prototype.drawPlayers = function() {
@@ -208,12 +224,32 @@ PredatorsCore.prototype.drawPlayers = function() {
     }
 };
 
-PredatorsCore.prototype.drawBackground = function() {
-    var x = -1 * (this.bg.width - this.canvas.width) / 2;
-    var y = -1 * (this.bg.height - this.canvas.height) / 2;
-    x -= this.x;
-    y -= this.y;
-    this.ctx.drawImage(this.bg, x, y);
+/*
+ * Server-specific functions
+ */
+
+/*
+ * Calculate physics of one tick for all players in this game
+ * params: none
+ * return: none
+ */
+PredatorsCore.prototype.updatePlayerPositions = function() {
+    this.players = this.players.map(function(player) {
+        var x = player.x;
+        var y = player.y;
+
+        if (player.keysDown.right) x += 1;
+        if (player.keysDown.left)  x -= 1;
+        if (player.keysDown.up)    y -= 1;
+        if (player.keysDown.down)  y += 1;
+
+        if (this.isWithinBoundaries(x, y)) {
+            player.x = x;
+            player.y = y;
+        }
+
+        return player;
+    });
 };
 
 /*

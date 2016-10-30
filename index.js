@@ -97,17 +97,6 @@ var options = {
     }
 };
 
-// Ping the main server.
-// This allows your server to be listed on the list of all avaiable servers.
-request(options, function(err, res, body) {
-    if (err) { 
-        console.log('There was an error reaching the server list on http://predators.io :(\n' + err);
-        return;
-    }
-    console.log(res,body);
-    console.log('Reached main server at http://predators.io/. Your server has been added to the main server list on http://predators.io.');
-});
-
 // TODO move back to core?
 var updatePlayerPositions = function() {
     game.players = game.players.map(function(player) {
@@ -127,6 +116,16 @@ var updatePlayerPositions = function() {
         return player;
     });
 };
+
+// Ping the main server.
+// This allows your server to be listed on the list of all avaiable servers.
+request(options, function(err, res, body) {
+    if (err) { 
+        console.log('There was an error reaching the server list on http://predators.io :(\n' + err);
+        return;
+    }
+    console.log('Reached main server at http://predators.io/. Your server has been added to the main server list on http://predators.io.');
+});
 
 // Update all player positions every 15ms
 setInterval(updatePlayerPositions, 15);

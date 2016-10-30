@@ -233,24 +233,6 @@ PredatorsCore.prototype.drawPlayers = function() {
  * params: none
  * return: none
  */
-PredatorsCore.prototype.updatePlayerPositions = function() {
-    this.players = this.players.map(function(player) {
-        var x = player.x;
-        var y = player.y;
-
-        if (player.keysDown.right) x += 1;
-        if (player.keysDown.left)  x -= 1;
-        if (player.keysDown.up)    y -= 1;
-        if (player.keysDown.down)  y += 1;
-
-        if (this.isWithinBoundaries(x, y)) {
-            player.x = x;
-            player.y = y;
-        }
-
-        return player;
-    });
-};
 
 /*
  * Utility functions

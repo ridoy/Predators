@@ -18,21 +18,24 @@ var express = require('express'),
     io      = require('socket.io')(http),
     uuid    = require('node-uuid'),
     path    = require('path'),
-    config  = require('./config/config.js');
-    core    = require('./public/core/predators.js');
-
-// Server settings
-// Adjust these to your preference in config/config.js
-var port       = config.port;
-    maxPlayers = config.maxPlayers; 
-
-var game = new PredatorsCore();
+    config  = require('./config/config.js'),
+    core    = require('./public/core/predators.js'),
+    maps    = require('./maps/maps.js');
 
 app.use(express.static('public'));
 
 http.listen(port, function() {
   console.log('Listening on ' + port)
 })
+
+// Server settings
+// Adjust these to your preference in config/config.js
+var port       = config.port;
+    maxPlayers = config.maxPlayers; 
+
+// Instantiate the game core and map
+var game = new PredatorsCore();
+game.setMap(maps.map1);
 
 // Multiplayer logic
 io.on('connection', function(client) {
@@ -52,6 +55,7 @@ io.on('connection', function(client) {
     // Send this player their id and a list of players
     client.emit('connected', {
         id: client.id,
+        map: game.map,
         players: game.players
     });
 
@@ -85,19 +89,6 @@ io.on('connection', function(client) {
     setInterval(updateAllClients, 45);
 })
 
-var options = {
-    url: config.mainPredatorsHost + '/serverlist',
-    method: 'POST',
-    followAllRedirects: true,
-    form: { 
-        url: config.thisHost,
-        name: config.serverName,
-        playerCount: game.players.length, 
-        maxPlayers: maxPlayers 
-    }
-};
-
-// TODO move back to core?
 var updatePlayerPositions = function() {
     game.players = game.players.map(function(player) {
         var x = player.x;
@@ -117,8 +108,23 @@ var updatePlayerPositions = function() {
     });
 };
 
+// Update all player positions every 15ms
+setInterval(updatePlayerPositions, 15);
+
 // Ping the main server.
 // This allows your server to be listed on the list of all avaiable servers.
+var options = {
+    url: config.mainPredatorsHost + '/serverlist',
+    method: 'POST',
+    followAllRedirects: true,
+    form: { 
+        url: config.thisHost,
+        name: config.serverName,
+        playerCount: game.players.length, 
+        maxPlayers: maxPlayers 
+    }
+};
+
 request(options, function(err, res, body) {
     if (err) { 
         console.log('There was an error reaching the server list on http://predators.io :(\n' + err);
@@ -126,9 +132,6 @@ request(options, function(err, res, body) {
     }
     console.log('Reached main server at http://predators.io/. Your server has been added to the main server list on http://predators.io.');
 });
-
-// Update all player positions every 15ms
-setInterval(updatePlayerPositions, 15);
 
 // After initial request to main server, the main server will periodically check on the server at this route.
 // We send back the current number of players online.

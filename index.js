@@ -78,7 +78,7 @@ io.on('connection', function(client) {
         }
     });
 
-    function updateAllClients() {
+    function sendUpdateToClient() {
         client.emit('serverUpdate', {
             players: game.players,
             time:    Date.now()
@@ -86,9 +86,15 @@ io.on('connection', function(client) {
     }
 
     // Send out server's record of positions every 45ms
-    setInterval(updateAllClients, 45);
+    setInterval(sendUpdateToClient, 45);
 })
 
+
+/*
+ * Calculate physics of one tick for all players in this game
+ * params: none
+ * return: none
+ */
 var updatePlayerPositions = function() {
     game.players = game.players.map(function(player) {
         var x = player.x;

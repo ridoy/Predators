@@ -22,8 +22,8 @@ var PredatorsCore = function() {
 
 PredatorsCore.prototype.setMap = function(map) {
     this.map       = map;
-    this.mapWidth  = map.data[0].length;
-    this.mapHeight = map.data.length;
+    this.mapWidth  = this.map[0].length;
+    this.mapHeight = this.map.length;
 };
 
 /*
@@ -37,8 +37,8 @@ PredatorsCore.prototype.clientConnect = function() {
     // Set up client data
     this.clientTime = Date.now();
     this.keysDown   = { right: false, left: false, up: false };
-    this.x          = 0;
-    this.y          = 0;
+    this.x          = 100;
+    this.y          = 100;
     this.xVelocity  = 0;
     this.yVelocity  = 0;
     this.isOnGround = 0;
@@ -46,8 +46,6 @@ PredatorsCore.prototype.clientConnect = function() {
 
     // Set up view
     this.canvas        = $('#view')[0];
-    this.canvas.width  = $(window).width();
-    this.canvas.height = $(window).height();
     this.ctx           = this.canvas.getContext('2d');
 
     // Connect to remote server
@@ -59,7 +57,18 @@ PredatorsCore.prototype.clientConnect = function() {
     this.socket.on('connected', function(msg) {
         $this.id      = msg.id;
         $this.players = msg.players;
+
+        // Resize canvas to fit map
         $this.setMap(msg.map);
+        $this.canvas.width  = $this.mapWidth * $this.scaleFactor;
+        $this.canvas.height = $this.mapHeight * $this.scaleFactor;
+
+        // Center the canvas
+        $this.canvas.style.marginLeft  = 'auto'
+        $this.canvas.style.marginRight = 'auto'
+
+        // Begin game processing and drawing
+        $this.updateLoop();
     });
 
     // Handle updates from the server
@@ -76,14 +85,17 @@ PredatorsCore.prototype.clientConnect = function() {
 
         // Update local position if different from server's record
         var thisPlayer = $this.findPlayer($this.id);
+        /*
+         TODO reinstate
         $this.x = thisPlayer.x;
         $this.y = thisPlayer.y;
+        */
     });
 
     // Handle keyboard input
     $(window).keydown(function(e) {
         var direction = $this.getDirectionFromKey(e.keyCode);
-
+        console.log('yo');
         if (direction) {
             $this.keysDown[direction] = true;
             $this.sendClientStateToServer();
@@ -100,11 +112,13 @@ PredatorsCore.prototype.clientConnect = function() {
         }
     });
 
+    /*
     // Handle when user resizes window
     $(window).resize(function() {
         $this.canvas.width  = $(window).width();
         $this.canvas.height = $(window).height();
     });
+    */
 
 };
 
@@ -123,22 +137,28 @@ PredatorsCore.prototype.checkIfOnGround = function() {
     var row = Math.floor(this.y / this.scaleFactor);
     var col = Math.floor(this.x / this.scaleFactor)
 
-    if (row == this.mapHeight - 1) { return true; }
+    if (row == this.mapHeight - 1) {
+        return this.isOnGround = true;
+    }
 
-    var thisBlock  = this.map.data[row][col];
-    var blockBelow = this.map.data[row + 1][col];
+    var thisBlock  = this.map[row][col];
+    var blockBelow = this.map[row + 1][col];
+    this.blockToColor = {
+        r: row + 1,
+        c: col
+    };
 
     if (blockBelow == 0) {
-        return false;
+        return this.isOnGround = false;
     }
     // TODO tweak value
-    var valueToTweak = 1;
-    if (blockBelow == 1 && (this.y / scaleFactor) - row < valueToTweak) {
-        return true;
+    var valueToTweak = .5;
+    if (blockBelow == 1 && (row + 1) - (this.y / this.scaleFactor) < valueToTweak) {
+        return this.isOnGround = true;
     }
 };
 
-// Calculate client's position locally
+// Calculate client's position locally for one tick
 PredatorsCore.prototype.clientUpdate = function() {
     var x = this.x;
     var y = this.y;
@@ -146,34 +166,40 @@ PredatorsCore.prototype.clientUpdate = function() {
     this.checkIfOnGround();
 
     // Handle left/right movement
-    if (this.keysDown.right) this.xVelocity = 1;
-    if (this.keysDown.left)  this.xVelocity = -1;
+    if (this.keysDown.right) this.xVelocity = 3;
+    if (this.keysDown.left)  this.xVelocity = -3;
 
     this.xVelocity *= 0.9; // Smoothly decelerate
 
     // Handle jumping
     if (this.isOnGround) {
         if (this.keysDown.up) {
-            this.yVelocity = 5;
+            this.yVelocity = 10;
+        } else {
+            this.yVelocity = 0;
         }
     } else {
-        this.yVelocity -= 1;
+        this.yVelocity -= 0.5;
     }
 
-    x += xVelocity;
-    y += yVelocity;
+    x += this.xVelocity;
+    y -= this.yVelocity;
 
     if (this.isWithinBoundaries(x, y)) {
         this.x = x;
         this.y = y;
+    } else { // push back
+        this.xVelocity *= -2;
+        x = this.x + this.xVelocity;
+        this.x = x;
     }
 
     this.draw();
 };
 
 // Refresh all updates
-PredatorsCore.prototype.update = function() {
-    requestAnimationFrame(this.update.bind(this));
+PredatorsCore.prototype.updateLoop = function() {
+    requestAnimationFrame(this.updateLoop.bind(this));
 
     this.clientUpdate();
 };
@@ -189,15 +215,26 @@ PredatorsCore.prototype.draw = function() {
 };
 
 PredatorsCore.prototype.drawBackground = function() {
-// TODO You left off deliberating if there should be a scrolling background at all
-    var x = -1 * (this.bg.width - this.canvas.width) / 2;
-    var y = -1 * (this.bg.height - this.canvas.height) / 2;
-    x -= this.x;
-    y -= this.y;
-    this.ctx.drawImage(this.bg, x, y);
+    var scaleFactor = this.scaleFactor;
+    for (var r = 0; r < this.mapHeight; r++) {
+        for (var c = 0; c < this.mapWidth; c++) {
+            if (this.blockToColor.r == r && this.blockToColor.c == c) {
+                this.ctx.fillStyle = 'rgb(255,0,0)';
+            } else {
+                this.ctx.fillStyle = 'rgb(0,0,0)';
+            }
+            if (this.map[r][c] == 1) {
+                // draw block
+                this.ctx.fillRect(c * scaleFactor, r * scaleFactor, scaleFactor, scaleFactor);
+            } else {
+                // nothin my guy
+            }
+        }
+    }
 };
 
 PredatorsCore.prototype.drawPlayers = function() {
+    /*
     // Find server positions to interpolate between
     var renderTime = this.clientTime - this.interpolationDelay;
     var prevSnapshot = null;
@@ -241,28 +278,19 @@ PredatorsCore.prototype.drawPlayers = function() {
             });
         }
     }
+    */
 
-    // Draw self in window center
-    var centerX = $(window).width() / 2;
-    var centerY = $(window).height() / 2;
+    // Draw self
+
     this.ctx.beginPath();
-    this.ctx.arc(centerX, centerY, 3, 0, 2*Math.PI);
+    this.ctx.arc(this.x, this.y, 3, 0, 2*Math.PI);
     this.ctx.stroke();
-
-    // Draw other players
+    // Draw all players
     for (var i = 0; i < this.players.length; i++) {
-	var player = this.players[i];
-        if (player.id !== this.id) { // Don't draw self twice
-            var distX = player.x - this.x;
-            var distY = player.y - this.y;
-
-            // Draw player if within window
-            if (Math.abs(distX) <= centerX && Math.abs(distY) <= centerY) {
-                this.ctx.beginPath();
-                this.ctx.arc(distX + centerX, distY + centerY, 3, 0, 2*Math.PI);
-                this.ctx.stroke();
-            }
-        }
+	    var player = this.players[i];
+        this.ctx.beginPath();
+        this.ctx.arc(player.x, player.y, 3, 0, 2*Math.PI);
+        this.ctx.stroke();
     }
 };
 
@@ -327,8 +355,8 @@ PredatorsCore.prototype.lerp = function(v1, v2, t) {
  * return: true if legal false if illegal
  */
 PredatorsCore.prototype.isWithinBoundaries = function(x, y) {
-    var xValid = -1 * (this.mapHeight / 2) < x && x < this.mapHeight / 2
-    var yValid = -1 * (this.mapWidth / 2) < y && y < this.mapWidth / 2
+    var xValid = 0 < x && x < this.mapWidth * this.scaleFactor;
+    var yValid = 0 < y && y < this.mapHeight * this.scaleFactor;
 
     return xValid && yValid;
 };

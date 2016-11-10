@@ -24,14 +24,14 @@ var express = require('express'),
 
 app.use(express.static('public'));
 
-http.listen(port, function() {
-  console.log('Listening on ' + port)
-})
-
 // Server settings
 // Adjust these to your preference in config/config.js
 var port       = config.port;
     maxPlayers = config.maxPlayers; 
+
+http.listen(port, function() {
+  console.log('Listening on ' + port)
+})
 
 // Instantiate the game core and map
 var game = new PredatorsCore();
@@ -100,10 +100,23 @@ var updatePlayerPositions = function() {
         var x = player.x;
         var y = player.y;
 
-        if (player.keysDown.right) x += 1;
-        if (player.keysDown.left)  x -= 1;
-        if (player.keysDown.up)    y -= 1;
-        if (player.keysDown.down)  y += 1;
+        // Handle left/right movement
+        if (player.keysDown.right) player.xVelocity = 1;
+        if (player.keysDown.left)  player.xVelocity = -1;
+
+        player.xVelocity *= 0.9; // Smoothly decelerate
+
+        // Handle jumping
+        if (player.isOnGround) {
+            if (player.keysDown.up) {
+                player.yVelocity = 5;
+            }
+        } else {
+            player.yVelocity -= 1;
+        }
+
+        x += player.xVelocity;
+        y -= player.yVelocity;
 
         if (game.isWithinBoundaries(x, y)) {
             player.x = x;

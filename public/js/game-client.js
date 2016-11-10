@@ -14,7 +14,5 @@ window.onload = function() {
   var game = new PredatorsCore();
   console.log(game);
   game.clientConnect();
-  game.update();
-  
 };
 

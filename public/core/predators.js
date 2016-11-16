@@ -47,6 +47,7 @@ PredatorsCore.prototype.clientConnect = function() {
     // Set up view
     this.canvas        = $('#view')[0];
     this.ctx           = this.canvas.getContext('2d');
+    this.playerRadius  = 5;
 
     // Connect to remote server
     var queryParams = this.getQueryParamsFromURL();
@@ -95,7 +96,6 @@ PredatorsCore.prototype.clientConnect = function() {
     // Handle keyboard input
     $(window).keydown(function(e) {
         var direction = $this.getDirectionFromKey(e.keyCode);
-        console.log('yo');
         if (direction) {
             $this.keysDown[direction] = true;
             $this.sendClientStateToServer();
@@ -133,37 +133,10 @@ PredatorsCore.prototype.sendClientStateToServer = function() {
     });
 };
 
-PredatorsCore.prototype.checkIfOnGround = function() {
-    var row = Math.floor(this.y / this.scaleFactor);
-    var col = Math.floor(this.x / this.scaleFactor)
-
-    if (row == this.mapHeight - 1) {
-        return this.isOnGround = true;
-    }
-
-    var thisBlock  = this.map[row][col];
-    var blockBelow = this.map[row + 1][col];
-    this.blockToColor = {
-        r: row + 1,
-        c: col
-    };
-
-    if (blockBelow == 0) {
-        return this.isOnGround = false;
-    }
-    // TODO tweak value
-    var valueToTweak = .5;
-    if (blockBelow == 1 && (row + 1) - (this.y / this.scaleFactor) < valueToTweak) {
-        return this.isOnGround = true;
-    }
-};
-
 // Calculate client's position locally for one tick
 PredatorsCore.prototype.clientUpdate = function() {
     var x = this.x;
     var y = this.y;
-
-    this.checkIfOnGround();
 
     // Handle left/right movement
     if (this.keysDown.right) this.xVelocity = 3;
@@ -174,12 +147,25 @@ PredatorsCore.prototype.clientUpdate = function() {
     // Handle jumping
     if (this.isOnGround) {
         if (this.keysDown.up) {
+            this.isOnGround = false;
             this.yVelocity = 10;
         } else {
             this.yVelocity = 0;
         }
     } else {
-        this.yVelocity -= 0.5;
+        // Calculate the user's position in the next tick
+        var tempYVelocity = this.yVelocity - 0.5;
+
+        var newRow = Math.floor((this.y + this.playerRadius - tempYVelocity) / this.scaleFactor);
+        var newCol = Math.floor(this.x / this.scaleFactor);
+
+        if (this.map[newRow][newCol] === 1) { // If the user will be in the ground in the next tick
+            // Then bounce back up to the surface
+            this.yVelocity = -1 * ((newRow * this.scaleFactor) - (this.y + this.playerRadius));
+            this.isOnGround = true;
+        } else { // User is still in the air
+            this.yVelocity = tempYVelocity;
+        }
     }
 
     x += this.xVelocity;
@@ -216,13 +202,16 @@ PredatorsCore.prototype.draw = function() {
 
 PredatorsCore.prototype.drawBackground = function() {
     var scaleFactor = this.scaleFactor;
+    this.ctx.fillStyle = 'rgb(0,0,0)';
     for (var r = 0; r < this.mapHeight; r++) {
         for (var c = 0; c < this.mapWidth; c++) {
-            if (this.blockToColor.r == r && this.blockToColor.c == c) {
+            /*
+            if (this.blockToColor.r === r && this.blockToColor.c === c) {
                 this.ctx.fillStyle = 'rgb(255,0,0)';
             } else {
                 this.ctx.fillStyle = 'rgb(0,0,0)';
             }
+            */
             if (this.map[r][c] == 1) {
                 // draw block
                 this.ctx.fillRect(c * scaleFactor, r * scaleFactor, scaleFactor, scaleFactor);
@@ -283,13 +272,13 @@ PredatorsCore.prototype.drawPlayers = function() {
     // Draw self
 
     this.ctx.beginPath();
-    this.ctx.arc(this.x, this.y, 3, 0, 2*Math.PI);
+    this.ctx.arc(this.x, this.y, this.playerRadius, 0, 2*Math.PI);
     this.ctx.stroke();
     // Draw all players
     for (var i = 0; i < this.players.length; i++) {
 	    var player = this.players[i];
         this.ctx.beginPath();
-        this.ctx.arc(player.x, player.y, 3, 0, 2*Math.PI);
+        this.ctx.arc(player.x, player.y, this.playerRadius, 0, 2*Math.PI);
         this.ctx.stroke();
     }
 };

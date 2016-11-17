@@ -1,8 +1,5 @@
 /*
- * PREDATORS
- * Online Multiplayer Game
- *
- * predators.js
+ * Predators Core
  *
  * AUTHORS
  * Ridoy Majumdar (https://github.com/ridoymajumdar)
@@ -20,14 +17,13 @@ var PredatorsCore = function() {
     this.bufferSize         = 12;
 };
 
-PredatorsCore.prototype.setMap = function(map) {
-    this.map       = map;
-    this.mapWidth  = this.map[0].length;
-    this.mapHeight = this.map.length;
-};
+// If on server, allow core to be require-able
+if ('undefined' != typeof global) {
+    module.exports = global.PredatorsCore = PredatorsCore;
+}
 
-/*
- * Client-specific functions
+/* 
+ * Client functions
  */
 
 // Set game variables and listeners when client connects
@@ -205,18 +201,9 @@ PredatorsCore.prototype.drawBackground = function() {
     this.ctx.fillStyle = 'rgb(0,0,0)';
     for (var r = 0; r < this.mapHeight; r++) {
         for (var c = 0; c < this.mapWidth; c++) {
-            /*
-            if (this.blockToColor.r === r && this.blockToColor.c === c) {
-                this.ctx.fillStyle = 'rgb(255,0,0)';
-            } else {
-                this.ctx.fillStyle = 'rgb(0,0,0)';
-            }
-            */
             if (this.map[r][c] == 1) {
                 // draw block
                 this.ctx.fillRect(c * scaleFactor, r * scaleFactor, scaleFactor, scaleFactor);
-            } else {
-                // nothin my guy
             }
         }
     }
@@ -269,11 +256,10 @@ PredatorsCore.prototype.drawPlayers = function() {
     }
     */
 
-    // Draw self
-
     this.ctx.beginPath();
     this.ctx.arc(this.x, this.y, this.playerRadius, 0, 2*Math.PI);
     this.ctx.stroke();
+
     // Draw all players
     for (var i = 0; i < this.players.length; i++) {
 	    var player = this.players[i];
@@ -283,9 +269,21 @@ PredatorsCore.prototype.drawPlayers = function() {
     }
 };
 
+
 /*
  * Utility functions
  */
+
+/*
+ * Set the map for this game
+ * params: map (2D array of 1s and 0s representing the map)
+ * return: none
+ */
+PredatorsCore.prototype.setMap = function(map) {
+    this.map       = map;
+    this.mapWidth  = this.map[0].length;
+    this.mapHeight = this.map.length;
+};
 
 /*
  * Grab query params from URL
@@ -363,8 +361,3 @@ PredatorsCore.prototype.findPlayer = function(id) {
     }
     return null;
 };
-
-// If on server, allow core to be require-able
-if ('undefined' != typeof global) {
-    module.exports = global.PredatorsCore = PredatorsCore;
-}

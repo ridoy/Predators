@@ -19,7 +19,7 @@ var express = require('express'),
     uuid    = require('node-uuid'),
     path    = require('path'),
     config  = require('./config/config.js'),
-    core    = require('./public/core/predators.js'),
+    core    = require('./public/js/core.js'),
     maps    = require('./maps/maps.js');
 
 app.use(express.static('public'));

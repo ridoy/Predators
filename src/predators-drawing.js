@@ -69,7 +69,7 @@ PredatorsCore.prototype.drawPlayers = function() {
     */
 
     this.ctx.beginPath();
-    this.ctx.arc(this.x, this.y, this.playerRadius, 0, 2*Math.PI);
+    this.ctx.arc(this.player.x, this.player.y, this.playerRadius, 0, 2*Math.PI);
     this.ctx.stroke();
 
     // Draw all players

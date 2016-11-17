@@ -11,6 +11,7 @@ var PredatorsCore = function() {
     this.players            = [];
     this.serverSnapshots    = [];
     this.scaleFactor        = 10;
+    this.playerRadius       = 5;
 
     // Performance settings
     this.interpolationDelay = 100; // 100ms

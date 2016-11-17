@@ -11,6 +11,7 @@ var PredatorsCore = function() {
     this.players            = [];
     this.serverSnapshots    = [];
     this.scaleFactor        = 10;
+    this.playerRadius       = 5;
 
     // Performance settings
     this.interpolationDelay = 100; // 100ms
@@ -32,18 +33,19 @@ PredatorsCore.prototype.clientConnect = function() {
 
     // Set up client data
     this.clientTime = Date.now();
-    this.keysDown   = { right: false, left: false, up: false };
-    this.x          = 100;
-    this.y          = 100;
-    this.xVelocity  = 0;
-    this.yVelocity  = 0;
-    this.isOnGround = 0;
-    this.id;
+    this.player = {
+        x: 100,
+        y: 100,
+        xVelocity: 0,
+        yVelocity: 0,
+        isOnGround: false,
+        keysDown: { right: false, left: false, up: false },
+    };
 
     // Set up view
-    this.canvas        = $('#view')[0];
-    this.ctx           = this.canvas.getContext('2d');
-    this.playerRadius  = 5;
+    this.canvas       = $('#view')[0];
+    this.ctx          = this.canvas.getContext('2d');
+    this.playerRadius = 5;
 
     // Connect to remote server
     var queryParams = this.getQueryParamsFromURL();
@@ -93,7 +95,7 @@ PredatorsCore.prototype.clientConnect = function() {
     $(window).keydown(function(e) {
         var direction = $this.getDirectionFromKey(e.keyCode);
         if (direction) {
-            $this.keysDown[direction] = true;
+            $this.player.keysDown[direction] = true;
             $this.sendClientStateToServer();
         }
     });
@@ -103,7 +105,7 @@ PredatorsCore.prototype.clientConnect = function() {
         var direction = $this.getDirectionFromKey(e.keyCode);
 
         if (direction) {
-            $this.keysDown[direction] = false;
+            $this.player.keysDown[direction] = false;
             $this.sendClientStateToServer();
         }
     });
@@ -121,69 +123,88 @@ PredatorsCore.prototype.clientConnect = function() {
 PredatorsCore.prototype.sendClientStateToServer = function() {
     this.socket.emit('clientStateUpdate', {
         id: this.id,
-        localX: this.x,
-        localY: this.y,
-        localXVelocity: this.xVelocity,
-        localYVelocity: this.xVelocity,
-        keysDown: this.keysDown
+        localX: this.player.x,
+        localY: this.player.y,
+        localXVelocity: this.player.xVelocity,
+        localYVelocity: this.player.xVelocity,
+        keysDown: this.player.keysDown
     });
 };
 
-// Calculate client's position locally for one tick
-PredatorsCore.prototype.clientUpdate = function() {
-    var x = this.x;
-    var y = this.y;
-
+PredatorsCore.prototype.calculateXAfterOneTick = function(player) {
     // Handle left/right movement
-    if (this.keysDown.right) this.xVelocity = 3;
-    if (this.keysDown.left)  this.xVelocity = -3;
+    if (player.keysDown.right) player.xVelocity = 3;
+    if (player.keysDown.left)  player.xVelocity = -3;
 
-    this.xVelocity *= 0.9; // Smoothly decelerate
+    player.xVelocity *= 0.9; // Smoothly decelerate
+
+    return player.x + player.xVelocity;
+}
+
+PredatorsCore.prototype.calculateYAfterOneTick = function(player) {
+    var prevX = player.x;
+    var prevY = player.y;
 
     // Handle jumping
-    if (this.isOnGround) {
-        if (this.keysDown.up) {
-            this.isOnGround = false;
-            this.yVelocity = 10;
+    if (player.isOnGround) {
+        if (player.keysDown.up) {
+            player.isOnGround = false;
+            player.yVelocity = 10;
         } else {
-            this.yVelocity = 0;
+            player.yVelocity = 0;
         }
     } else {
         // Calculate the user's position in the next tick
-        var tempYVelocity = this.yVelocity - 0.5;
+        var tempYVelocity = player.yVelocity - 0.5;
+        var scaleFactor   = player.scaleFactor || this.scaleFactor || 10;
+        var playerRadius  = player.playerRadius || this.playerRadius || 5;
 
-        var newRow = Math.floor((this.y + this.playerRadius - tempYVelocity) / this.scaleFactor);
-        var newCol = Math.floor(this.x / this.scaleFactor);
+        var newRow = Math.floor((prevY + playerRadius - tempYVelocity) / scaleFactor);
+        var newCol = Math.floor(prevX / scaleFactor);
 
-        if (this.map[newRow][newCol] === 1) { // If the user will be in the ground in the next tick
-            // Then bounce back up to the surface
-            this.yVelocity = -1 * ((newRow * this.scaleFactor) - (this.y + this.playerRadius));
-            this.isOnGround = true;
+        // If the user will be in the ground in the next tick, then bounce back up to the surface
+        if (this.map[newRow][newCol] === 1) { 
+            player.yVelocity = -1 * ((newRow * scaleFactor) - (prevY + playerRadius));
+            player.isOnGround = true;
         } else { // User is still in the air
-            this.yVelocity = tempYVelocity;
+            player.yVelocity = tempYVelocity;
         }
     }
 
-    x += this.xVelocity;
-    y -= this.yVelocity;
+    return prevY - player.yVelocity;
+}
 
-    if (this.isWithinBoundaries(x, y)) {
-        this.x = x;
-        this.y = y;
-    } else { // push back
-        this.xVelocity *= -2;
-        x = this.x + this.xVelocity;
-        this.x = x;
+// Calculate player's movement for one tick
+PredatorsCore.prototype.updatePlayerPosition = function(player) {
+    var x = this.calculateXAfterOneTick(player);
+    var y = this.calculateYAfterOneTick(player);
+
+    if (!this.isWithinBoundaries(x, y)) { // Hitting wall, push back
+        player.xVelocity *= -2;
+        x = player.x + player.xVelocity;
     }
 
-    this.draw();
+    player.x = x;
+    player.y = y;
+};
+
+PredatorsCore.prototype.generateNewPlayer = function() {
+    return {
+        x: 100,
+        y: 100,
+        xVelocity: 0,
+        yVelocity: 0,
+        isOnGround: false,
+        keysDown: { 'left': false, 'right': false, 'up': false, 'down': false }
+    };
 };
 
 // Refresh all updates
 PredatorsCore.prototype.updateLoop = function() {
     requestAnimationFrame(this.updateLoop.bind(this));
 
-    this.clientUpdate();
+    this.updatePlayerPosition(this.player);
+    this.draw();
 };
 
 /*
@@ -257,7 +278,7 @@ PredatorsCore.prototype.drawPlayers = function() {
     */
 
     this.ctx.beginPath();
-    this.ctx.arc(this.x, this.y, this.playerRadius, 0, 2*Math.PI);
+    this.ctx.arc(this.player.x, this.player.y, this.playerRadius, 0, 2*Math.PI);
     this.ctx.stroke();
 
     // Draw all players

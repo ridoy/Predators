@@ -45,8 +45,10 @@ io.on('connection', function(client) {
 
     game.players.push({
         id: client.id,
-        x: 0,
-        y: 0,
+        x: 100,
+        y: 100,
+        xVelocity: 0,
+        yVelocity: 0,
         keysDown: {}
     });
 
@@ -69,10 +71,10 @@ io.on('connection', function(client) {
 
     // Remove this player from game when disconnected
     client.on('disconnect', function() {
-        console.log('A player disconnected :(\nPlayers online:\n' + game.players);
         for (var i = 0; i < game.players.length; i++) {
             if (game.players[i].id === client.id) {
                 game.players.splice(i, 1);
+                console.log('A player disconnected :(\nPlayers online:\n' + game.players);
                 return;
             }
         }
@@ -97,31 +99,7 @@ io.on('connection', function(client) {
  */
 var updatePlayerPositions = function() {
     game.players = game.players.map(function(player) {
-        var x = player.x;
-        var y = player.y;
-
-        // Handle left/right movement
-        if (player.keysDown.right) player.xVelocity = 1;
-        if (player.keysDown.left)  player.xVelocity = -1;
-
-        player.xVelocity *= 0.9; // Smoothly decelerate
-
-        // Handle jumping
-        if (player.isOnGround) {
-            if (player.keysDown.up) {
-                player.yVelocity = 5;
-            }
-        } else {
-            player.yVelocity -= 1;
-        }
-
-        x += player.xVelocity;
-        y -= player.yVelocity;
-
-        if (game.isWithinBoundaries(x, y)) {
-            player.x = x;
-            player.y = y;
-        }
+        game.updatePlayerPosition(player);
 
         return player;
     });

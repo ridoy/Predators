@@ -22,52 +22,6 @@ PredatorsCore.prototype.drawBackground = function() {
 };
 
 PredatorsCore.prototype.drawPlayers = function() {
-    /*
-    // Find server positions to interpolate between
-    var renderTime = this.clientTime - this.interpolationDelay;
-    var prevSnapshot = null;
-    var nextSnapshot = null;
-
-    for (var i = 0; i < this.serverSnapshots.length - 1; i++) {
-        var a = this.serverSnapshots[i];
-        var b = this.serverSnapshots[i + 1];
-        
-        if (a.time <= renderTime && renderTime <= b.time) {
-            prevSnapshot = a;
-            nextSnapshot = b;
-            break;
-        }
-    }
-
-    if (!prevSnapshot || !nextSnapshot) {
-        return;
-    }
-
-    // Update this.players with interpolated positions
-    // TODO This can probably be done better
-    var players = [];
-    for (var i = 0; i < prevSnapshot.players.length; i++) {
-        // Skip if current player
-        if (prevSnapshot.players[i].id !== this.id) {
-            var prevVector = {
-                x: prevSnapshot.players[i].x,
-                y: prevSnapshot.players[i].y
-            };
-            var nextVector = {
-                x: nextSnapshot.players[i].x,
-                y: nextSnapshot.players[i].y
-            };
-            var newPosition = this.lerp(prevVector, nextVector, renderTime / (nextSnapshot.time - prevSnapshot.time)); 
-            players.push({
-                x: newPosition.x,
-                y: newPosition.y,
-                id: prevSnapshot.players[i].id,
-                keysDown: prevSnapshot.players[i].keysDown
-            });
-        }
-    }
-    */
-
     this.ctx.beginPath();
     this.ctx.arc(this.player.x, this.player.y, this.playerRadius, 0, 2*Math.PI);
     this.ctx.stroke();

@@ -28,34 +28,57 @@ describe('PredatorsCore', () => {
 
     describe('#updatePlayerPosition()', () => {
         it('should land player directly on ground surface', () => {
-            // Player spawns in sky and drops until on ground
+            // Player spawns in sky
             var player = core.generateNewPlayer();
+            dropPlayerToGround(player);
 
-            while (!player.isOnGround) {
-                core.updatePlayerPosition(player);
-            }
-
-            var rowBelow  = 1 + getRowFromY(player.y);
-            var expectedY = (rowBelow * core.scaleFactor) - core.playerRadius;
+            var groundRow = 1 + getRowFromY(player.y); // Add 1 to get row below player
+            var expectedY = (groundRow * core.scaleFactor) - core.playerRadius;
 
             assert.equal(expectedY, player.y)
         });
 
         it('yVelocity should be 0 if on ground', () => {
-            // Player spawns in sky and drops until on ground
+            // Player spawns in sky
             var player = core.generateNewPlayer();
-
-            while (!player.isOnGround) {
-                core.updatePlayerPosition(player);
-            }
+            dropPlayerToGround(player);
 
             // Update one more time
             core.updatePlayerPosition(player);
 
             assert.equal(player.yVelocity, 0);
         });
-
     });
+
+    describe('#calculateYAfterOneTick()', () => {
+        it('player should not be able to jump (yVelocity > 0) while in air', () => {
+            // Player spawns in sky
+            var player = core.generateNewPlayer();
+            player.keysDown.up = true;
+
+            // Run one tick -- player should still be in sky after this
+            core.updatePlayerPosition(player);
+
+            // If this errors, it means the player does not spawn high enough
+            assert.equal(player.isOnGround, false);
+
+            // Is the player jumping?
+            assert.equal(player.yVelocity > 0, false);
+        });
+    });
+
+    describe('#interpolateOtherUsers()', () => {
+        // Describe what should happen for interpolation
+        // Write tests to discover failures that crop up in operation
+        // Base tests on what the system has to do
+        //
+    });
+
+    function dropPlayerToGround(player) {
+        while (!player.isOnGround) {
+            core.updatePlayerPosition(player);
+        }
+    }
 
     function getColFromX(x) {
         return Math.floor(x / core.scaleFactor);

@@ -41,7 +41,7 @@ PredatorsCore.prototype.clientConnect = function() {
         $this.canvas.style.marginRight = 'auto'
 
         // Begin game processing and drawing
-        $this.updateLoop();
+        $this.clientUpdateLoop();
     });
 
     // Handle updates from the server
@@ -58,11 +58,8 @@ PredatorsCore.prototype.clientConnect = function() {
 
         // Update local position if different from server's record
         var thisPlayer = $this.findPlayer($this.id);
-        /*
-         TODO reinstate
         $this.x = thisPlayer.x;
         $this.y = thisPlayer.y;
-        */
     });
 
     // Handle keyboard input
@@ -173,10 +170,54 @@ PredatorsCore.prototype.generateNewPlayer = function() {
     };
 };
 
+PredatorsCore.prototype.interpolateOtherPlayers = function() {
+    // Find server positions to interpolate between
+    var renderTime   = this.clientTime - this.interpolationDelay;
+    var prevSnapshot = null;
+    var nextSnapshot = null;
+
+    for (var i = 0; i < this.serverSnapshots.length - 1; i++) {
+        var a = this.serverSnapshots[i];
+        var b = this.serverSnapshots[i + 1];
+        
+        if (a.time <= renderTime && renderTime <= b.time) {
+            prevSnapshot = a;
+            nextSnapshot = b;
+            break;
+        }
+    }
+
+    if (!prevSnapshot || !nextSnapshot) {
+        return;
+    }
+
+    // Update this.players with interpolated positions
+    // TODO This can probably be done better
+    var players = [];
+    for (var i = 0; i < prevSnapshot.players.length; i++) {
+        // Skip if current player
+        if (prevSnapshot.players[i].id !== this.id) {
+            prevPosition = prevSnapshot.players[i];
+            nextPosition = nextSnapshot.players[i];
+            var newPosition = this.lerp(prevPosition, nextPosition, renderTime / (nextSnapshot.time - prevSnapshot.time)); 
+
+            players.push({
+                x: newPosition.x,
+                y: newPosition.y,
+                id: prevSnapshot.players[i].id,
+                keysDown: prevSnapshot.players[i].keysDown
+            });
+        }
+    }
+
+    this.players = players;
+}
+
 // Refresh all updates
-PredatorsCore.prototype.updateLoop = function() {
-    requestAnimationFrame(this.updateLoop.bind(this));
+PredatorsCore.prototype.clientUpdateLoop = function() {
+    requestAnimationFrame(this.clientUpdateLoop.bind(this));
 
     this.updatePlayerPosition(this.player);
+    this.interpolateOtherPlayers();
     this.draw();
 };

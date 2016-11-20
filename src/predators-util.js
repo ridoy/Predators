@@ -77,6 +77,19 @@ PredatorsCore.prototype.isWithinBoundaries = function(x, y) {
 };
 
 /*
+ * Check if position is inside a filled block
+ * params: x (x coordinate)
+ *         y (y coordinate)
+ * return: true if legal false if illegal
+ */
+PredatorsCore.prototype.isInWall = function(x, y) {
+    var col = Math.floor((x + this.playerRadius) / this.scaleFactor);
+    var row = Math.floor(y / this.scaleFactor);
+
+    return this.map[row][col] === 1;
+};
+
+/*
  * Finds player by id
  * params: id (id of target player)
  * return: target player if player exists, else null

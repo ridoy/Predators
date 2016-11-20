@@ -116,6 +116,14 @@ PredatorsCore.prototype.calculateYAfterOneTick = function(player) {
     var prevX = player.x;
     var prevY = player.y;
 
+    // Test if block below is filled or if this player is floating
+    var rowBelow   = 1 + Math.floor(prevY / this.scaleFactor);
+    var col        = Math.floor(prevX / this.scaleFactor);
+    var blockBelow = this.map[rowBelow][col];
+    if (blockBelow === 0) {
+        player.isOnGround = false;
+    }
+
     // Handle jumping
     if (player.isOnGround) {
         if (player.keysDown.up) {
@@ -130,7 +138,7 @@ PredatorsCore.prototype.calculateYAfterOneTick = function(player) {
         var scaleFactor   = player.scaleFactor || this.scaleFactor || 10;
         var playerRadius  = player.playerRadius || this.playerRadius || 5;
 
-        var newRow = Math.floor((prevY + playerRadius - tempYVelocity) / scaleFactor);
+        var newRow = Math.floor((prevY - tempYVelocity) / scaleFactor);
         var newCol = Math.floor(prevX / scaleFactor);
 
         // If the user will be in the ground in the next tick, then bounce back up to the surface
@@ -150,9 +158,13 @@ PredatorsCore.prototype.updatePlayerPosition = function(player) {
     var x = this.calculateXAfterOneTick(player);
     var y = this.calculateYAfterOneTick(player);
 
-    if (!this.isWithinBoundaries(x, y)) { // Hitting wall, push back
+    if (!this.isWithinBoundaries(x, y)) { // Hitting boundary, push back
         player.xVelocity *= -2;
         x = player.x + player.xVelocity;
+    }
+
+    if (this.isInWall(x, y)) {
+        x = player.x;
     }
 
     player.x = x;

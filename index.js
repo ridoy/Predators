@@ -35,7 +35,7 @@ http.listen(port, function() {
 
 // Instantiate the game core and map
 var game = new PredatorsCore();
-game.setMap(maps.map1);
+game.setMap(maps.map2);
 
 // Multiplayer logic
 io.on('connection', function(client) {

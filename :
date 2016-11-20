@@ -61,27 +61,6 @@ describe('PredatorsCore', () => {
 
             var player = core.generateNewPlayer();
             dropPlayerToGround(player);
-
-            // Goal: Move right and at some point the player won't be able to move right anymore
-            // (because the player collides with the wall)
-            player.keysDown.right = true;
-
-            var row          = getRowFromY(player.y);
-            var colToRight   = 1 + getColFromX(player.x);
-            var blockToRight = core.map[row][colToRight];
-            while (blockToRight !== 1) {
-                core.updatePlayerPosition(player);
-                colToRight   = 1 + getColFromX(player.x);
-                blockToRight = core.map[row][colToRight];
-            }
-
-            var currentCol = getColFromX(player.x);
-            // Attempt to move right (10 times for good measure). Player should still be in same column
-            for (var i = 0; i < 10; i++) {
-                core.updatePlayerPosition(player);
-            }
-
-            assert.equal(currentCol, getColFromX(player.x));
         });
     });
 
@@ -89,11 +68,9 @@ describe('PredatorsCore', () => {
         it('player should not be able to jump (yVelocity > 0) while in air', () => {
             // Player spawns in sky
             var player = core.generateNewPlayer();
-
-            // Click jumping key
             player.keysDown.up = true;
 
-            // Calculate one tick in time -- player should still be in sky after this
+            // Run one tick -- player should still be in sky after this
             core.updatePlayerPosition(player);
 
             // If this errors, it means the player does not spawn high enough
@@ -104,6 +81,24 @@ describe('PredatorsCore', () => {
         });
 
         it('should drop player if space below is empty', () => {
+            core.setMap(maps.map2); // map2 has a hole which players fall into when they spawn
+            var player = core.generateNewPlayer();
+            dropPlayerToGround(player);
+
+            var lowerRow = getRowFromY(player.y); // Row of the map's hole
+
+            player.keysDown.right = true;
+            player.keysDown.up    = true;
+
+            core.updatePlayerPosition(player); // Jump up and to the right until outside of the hole
+            while (!player.isOnGround && getRowFromY(player.y) <= lowerRow) {
+                core.updatePlayerPosition(player); // Jump up and to the right until outside of the hole
+                console.log('huh');
+                console.log(getRomFromY(player.y), lowerRow, player.isOnGround);
+            }
+
+            assert.equal(getRowFromY(player.y), lowerRow - 1);
+
         });
     });
 
@@ -128,3 +123,4 @@ describe('PredatorsCore', () => {
         return Math.floor(y / core.scaleFactor);
     }
 });
+

@@ -83,10 +83,11 @@ PredatorsCore.prototype.isWithinBoundaries = function(x, y) {
  * return: true if legal false if illegal
  */
 PredatorsCore.prototype.isInWall = function(x, y) {
-    var col = Math.floor((x + this.playerRadius) / this.scaleFactor);
+    var colRightEdge = Math.floor((x + this.playerRadius) / this.scaleFactor);
+    var colLeftEdge  = Math.floor((x - this.playerRadius) / this.scaleFactor);
     var row = Math.floor(y / this.scaleFactor);
 
-    return this.map[row][col] === 1;
+    return this.map[row][colLeftEdge] === 1 || this.map[row][colRightEdge] === 1;
 };
 
 /*

@@ -56,7 +56,7 @@ describe('PredatorsCore', () => {
     });
 
     describe('#calculateXAfterOneTick()', () => {
-        it('should block player from going into a wall', () => {
+        it('should block player from going into a wall (player moving right into wall)', () => {
             core.setMap(maps.map2); // map2 has a hole which players fall into when they spawn
 
             var player = core.generateNewPlayer();
@@ -77,6 +77,34 @@ describe('PredatorsCore', () => {
 
             var currentCol = getColFromX(player.x);
             // Attempt to move right (10 times for good measure). Player should still be in same column
+            for (var i = 0; i < 10; i++) {
+                core.updatePlayerPosition(player);
+            }
+
+            assert.equal(currentCol, getColFromX(player.x));
+        });
+
+        it('should block player from going into a wall (player moving left into wall)', () => {
+            core.setMap(maps.map2); // map2 has a hole which players fall into when they spawn
+
+            var player = core.generateNewPlayer();
+            dropPlayerToGround(player);
+
+            // Goal: Move left and at some point the player won't be able to move left anymore
+            // (because the player collides with the wall)
+            player.keysDown.left = true;
+
+            var row          = getRowFromY(player.y);
+            var colToLeft    = getColFromX(player.x) - 1;
+            var blockToLeft  = core.map[row][colToLeft];
+            while (blockToLeft !== 1) {
+                core.updatePlayerPosition(player);
+                colToLeft   = getColFromX(player.x) - 1;
+                blockToLeft = core.map[row][colToLeft];
+            }
+
+            var currentCol = getColFromX(player.x);
+            // Attempt to move left (10 times for good measure). Player should still be in same column
             for (var i = 0; i < 10; i++) {
                 core.updatePlayerPosition(player);
             }

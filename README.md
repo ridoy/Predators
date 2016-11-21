@@ -1,4 +1,4 @@
-# How to install:
+# How to setup a Predators server:
 
 1. Grab the latest version of node.js: https://nodejs.org/en/
 2. `git clone https://github.com/ridoymajumdar/predators.git`

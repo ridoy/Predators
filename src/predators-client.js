@@ -201,7 +201,6 @@ PredatorsCore.prototype.interpolateOtherPlayers = function() {
     }
 
     if (!prevSnapshot || !nextSnapshot) {
-        console.log('This is a problem');
         return;
     }
 
@@ -209,16 +208,12 @@ PredatorsCore.prototype.interpolateOtherPlayers = function() {
     // TODO This can probably be done better
     var players = [];
     var timePoint = 1 - ((nextSnapshot.time - this.clientTime) / (nextSnapshot.time - prevSnapshot.time));
-    console.log(nextSnapshot.time, prevSnapshot.time, this.clientTime);
     for (var i = 0; i < prevSnapshot.players.length; i++) {
         // Skip if current player
         if (prevSnapshot.players[i].id !== this.id) {
             var prevPosition = prevSnapshot.players[i];
             var nextPosition = nextSnapshot.players[i];
             var newPosition  = this.lerp(prevPosition, nextPosition, timePoint);
-
-            console.log(prevPosition,nextPosition);
-            console.log(newPosition.x);
 
             players.push({
                 x: newPosition.x,

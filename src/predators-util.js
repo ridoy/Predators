@@ -58,9 +58,14 @@ PredatorsCore.prototype.lerp = function(v1, v2, t) {
     var _t = Number(t);
     _t = (_t < 0) ? 0 : ((_t > 1) ? 1 : _t.toFixed(5));
 
+    var dx = v2.x - v1.x;
+    var dy = v2.y - v1.y;
+    var newX = v1.x + _t * dx;
+    var newY = v1.y + _t * dy;
+
     return {
-        x: v1.x - _t * (v2.x - v1.x),
-        y: v1.y - _t * (v2.y - v1.y)
+        x: newX,
+        y: newY
     }
 };
 

@@ -29,9 +29,11 @@ PredatorsCore.prototype.drawPlayers = function() {
     // Draw all players
     for (var i = 0; i < this.players.length; i++) {
 	    var player = this.players[i];
-        this.ctx.beginPath();
-        this.ctx.arc(player.x, player.y, this.playerRadius, 0, 2*Math.PI);
-        this.ctx.stroke();
+        if (player.id !== this.id) {
+            this.ctx.beginPath();
+            this.ctx.arc(player.x, player.y, this.playerRadius, 0, 2*Math.PI);
+            this.ctx.stroke();
+        }
     }
 };
 

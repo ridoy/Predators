@@ -83,7 +83,7 @@ io.on('connection', function(client) {
     function sendUpdateToClient() {
         client.emit('serverUpdate', {
             players: game.players,
-            time:    Date.now()
+            time:    Number(new Date().getTime())
         });
     }
 

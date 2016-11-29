@@ -55,11 +55,12 @@ PredatorsCore.prototype.getDirectionFromKey = function(key) {
  */
 PredatorsCore.prototype.lerp = function(v1, v2, t) {
     // Validate 0 < t < 1
-    var _t = (t < 0) ? 0 : ((t > 1) ? 1 : t.fixed());
+    var _t = Number(t);
+    _t = (_t < 0) ? 0 : ((_t > 1) ? 1 : _t.toFixed(5));
 
     return {
-        x: v1.x + _t * (v2.x - v1.x),
-        y: v1.y + _t * (v2.y - v1.y)
+        x: v1.x - _t * (v2.x - v1.x),
+        y: v1.y - _t * (v2.y - v1.y)
     }
 };
 
@@ -96,9 +97,9 @@ PredatorsCore.prototype.isInWall = function(x, y) {
  * return: target player if player exists, else null
  */
 PredatorsCore.prototype.findPlayer = function(id) {
-    for (var i = 0; i < this.players.length; i++) {
-        if (this.players[i].id === id) {
-            return this.players[i];
+    for (var player of this.players) {
+        if (player.id === id) {
+            return player;
         }
     }
     return null;

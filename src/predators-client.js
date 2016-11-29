@@ -7,7 +7,7 @@ PredatorsCore.prototype.clientConnect = function() {
     var $this = this;
 
     // Set up client data
-    this.clientTime = Date.now();
+    this.clientTime = new Date().getTime() - this.interpolationDelay;
     this.player = {
         x: 100,
         y: 100,
@@ -46,20 +46,19 @@ PredatorsCore.prototype.clientConnect = function() {
 
     // Handle updates from the server
     this.socket.on('serverUpdate', function(msg) {
-        // Update positions of other players
-        $this.players    = msg.players;
-        $this.clientTime = msg.time;
         $this.serverSnapshots.push(msg);
 
         // Discard oldest server update
         if ($this.serverSnapshots.length > $this.bufferSize) {
-            $this.serverSnapshots.splice(0, 1);
+            $this.serverSnapshots.shift();
         }
 
         // Update local position if different from server's record
         var thisPlayer = $this.findPlayer($this.id);
-        $this.x = thisPlayer.x;
-        $this.y = thisPlayer.y;
+        if (thisPlayer) {
+            $this.x = thisPlayer.x;
+            $this.y = thisPlayer.y;
+        }
     });
 
     // Handle keyboard input
@@ -128,6 +127,7 @@ PredatorsCore.prototype.calculateYAfterOneTick = function(player) {
     if (player.isOnGround) {
         if (player.keysDown.up) {
             player.isOnGround = false;
+            // TODO reinstate player.yVelocity = 10;
             player.yVelocity = 10;
         } else {
             player.yVelocity = 0;
@@ -184,15 +184,16 @@ PredatorsCore.prototype.generateNewPlayer = function() {
 
 PredatorsCore.prototype.interpolateOtherPlayers = function() {
     // Find server positions to interpolate between
-    var renderTime   = this.clientTime - this.interpolationDelay;
     var prevSnapshot = null;
     var nextSnapshot = null;
+
+    this.clientTime = new Date().getTime() - this.interpolationDelay;
 
     for (var i = 0; i < this.serverSnapshots.length - 1; i++) {
         var a = this.serverSnapshots[i];
         var b = this.serverSnapshots[i + 1];
         
-        if (a.time <= renderTime && renderTime <= b.time) {
+        if (a.time <= this.clientTime && this.clientTime <= b.time) {
             prevSnapshot = a;
             nextSnapshot = b;
             break;
@@ -200,18 +201,21 @@ PredatorsCore.prototype.interpolateOtherPlayers = function() {
     }
 
     if (!prevSnapshot || !nextSnapshot) {
+        console.log('This is a problem');
         return;
     }
 
     // Update this.players with interpolated positions
     // TODO This can probably be done better
     var players = [];
+    var timePoint = (nextSnapshot.time - this.clientTime) / (nextSnapshot.time - prevSnapshot.time);
     for (var i = 0; i < prevSnapshot.players.length; i++) {
         // Skip if current player
         if (prevSnapshot.players[i].id !== this.id) {
-            prevPosition = prevSnapshot.players[i];
-            nextPosition = nextSnapshot.players[i];
-            var newPosition = this.lerp(prevPosition, nextPosition, renderTime / (nextSnapshot.time - prevSnapshot.time)); 
+            var prevPosition = prevSnapshot.players[i];
+            var nextPosition = nextSnapshot.players[i];
+            console.log(prevPosition, nextPosition);
+            var newPosition  = this.lerp(prevPosition, nextPosition, timePoint);
 
             players.push({
                 x: newPosition.x,
@@ -221,7 +225,6 @@ PredatorsCore.prototype.interpolateOtherPlayers = function() {
             });
         }
     }
-
     this.players = players;
 }
 

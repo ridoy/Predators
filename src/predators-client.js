@@ -30,6 +30,7 @@ PredatorsCore.prototype.clientConnect = function() {
     this.socket.on('connected', function(msg) {
         $this.id      = msg.id;
         $this.players = msg.players;
+        $this.coins   = msg.coins;
 
         // Resize canvas to fit map
         $this.setMap(msg.map);
@@ -46,6 +47,7 @@ PredatorsCore.prototype.clientConnect = function() {
 
     // Handle updates from the server
     this.socket.on('serverUpdate', function(msg) {
+        $this.coins = msg.coins;
         $this.serverSnapshots.push(msg);
 
         // Discard oldest server update
@@ -80,14 +82,6 @@ PredatorsCore.prototype.clientConnect = function() {
         }
     });
 
-    /*
-    // Handle when user resizes window
-    $(window).resize(function() {
-        $this.canvas.width  = $(window).width();
-        $this.canvas.height = $(window).height();
-    });
-    */
-
 };
 
 PredatorsCore.prototype.sendClientStateToServer = function() {
@@ -98,6 +92,14 @@ PredatorsCore.prototype.sendClientStateToServer = function() {
         localXVelocity: this.player.xVelocity,
         localYVelocity: this.player.xVelocity,
         keysDown: this.player.keysDown
+    });
+};
+
+PredatorsCore.prototype.sendCoinCaughtEvent = function(coin) {
+    this.socket.emit('coinCaughtEvent', {
+        coin: coin,
+        id: this.id,
+        time: Date.now()
     });
 };
 
@@ -224,13 +226,27 @@ PredatorsCore.prototype.interpolateOtherPlayers = function() {
         }
     }
     this.players = players;
-}
+};
+
+PredatorsCore.prototype.checkIfTouchingCoin = function(player) {
+    if (!player.x || !player.y) {
+        return false;
+    }
+    var playerPos = { x: player.x, y: player.y };
+    for (var coin of this.coins) {
+        if (this.distance(playerPos, coin) < 3*this.coinRadius) {
+            this.removeCoin(coin);
+            this.sendCoinCaughtEvent(coin);
+        }
+    }
+};
 
 // Refresh all updates
 PredatorsCore.prototype.clientUpdateLoop = function() {
     requestAnimationFrame(this.clientUpdateLoop.bind(this));
 
     this.updatePlayerPosition(this.player);
+    this.checkIfTouchingCoin(this.player);
     this.interpolateOtherPlayers();
     this.draw();
 };

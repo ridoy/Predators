@@ -10,6 +10,9 @@
 var PredatorsCore = function() {
     this.players            = [];
     this.serverSnapshots    = [];
+    this.coins              = [];
+    this.numCoins           = 50;
+    this.coinRadius         = 3;
     this.scaleFactor        = 10;
     this.playerRadius       = 5;
 

@@ -5,6 +5,7 @@
 PredatorsCore.prototype.draw = function() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawBackground();
+    this.drawCoins();
     this.drawPlayers();
 };
 
@@ -21,7 +22,18 @@ PredatorsCore.prototype.drawBackground = function() {
     }
 };
 
+PredatorsCore.prototype.drawCoins = function() {
+    this.ctx.strokeStyle = 'rgb(255,215,0)';
+    this.ctx.fillStyle = 'rgb(255,215,0)';
+    for (var coin of this.coins) {
+        this.ctx.beginPath();
+        this.ctx.arc(coin.x, coin.y, this.coinRadius, 0, 2*Math.PI);
+        this.ctx.stroke();
+    }
+};
+
 PredatorsCore.prototype.drawPlayers = function() {
+    this.ctx.strokeStyle = 'rgb(0,0,0)';
     this.ctx.beginPath();
     this.ctx.arc(this.player.x, this.player.y, this.playerRadius, 0, 2*Math.PI);
     this.ctx.stroke();
@@ -36,4 +48,3 @@ PredatorsCore.prototype.drawPlayers = function() {
         }
     }
 };
-

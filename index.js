@@ -49,7 +49,8 @@ io.on('connection', function(client) {
         y: 100,
         xVelocity: 0,
         yVelocity: 0,
-        keysDown: {}
+        keysDown: {},
+        score: 0
     });
 
     console.log('New friend connected!\nPlayers online:\n' + game.players);
@@ -58,7 +59,8 @@ io.on('connection', function(client) {
     client.emit('connected', {
         id: client.id,
         map: game.map,
-        players: game.players
+        players: game.players,
+        coins: game.coins
     });
 
     // Handle keysDown updates from this player
@@ -66,6 +68,16 @@ io.on('connection', function(client) {
         var player = game.findPlayer(msg.id);
         if (player) {
             player.keysDown = msg.keysDown;
+        }
+    });
+
+    // Handle when a player catches a coin
+    client.on('coinCaughtEvent', function(msg) {
+        var player = game.findPlayer(msg.id);
+        if (player) {
+            game.removeCoin(msg.coin);
+            player.score += 1;
+            console.log(player.score);
         }
     });
 
@@ -83,9 +95,11 @@ io.on('connection', function(client) {
     function sendUpdateToClient() {
         client.emit('serverUpdate', {
             players: game.players,
+            coins:   game.coins,
             time:    Number(new Date().getTime())
         });
     }
+
 
     // Send out server's record of positions every 45ms
     setInterval(sendUpdateToClient, 45);
@@ -105,8 +119,20 @@ var updatePlayerPositions = function() {
     });
 };
 
+var updateCoins = function() {
+    if (game.coins.length === 0) {
+        for (var i = 0; i < game.numCoins; i++) {
+            game.generateCoin();
+        }
+    } else if (game.coins.length < game.numCoins) {
+        game.generateCoin();
+    }
+};
+
 // Update all player positions every 15ms
 setInterval(updatePlayerPositions, 15);
+
+setInterval(updateCoins, 15);
 
 // Ping the main server.
 // This allows your server to be listed on the list of all avaiable servers.

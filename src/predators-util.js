@@ -29,6 +29,21 @@ PredatorsCore.prototype.getQueryParamsFromURL = function() {
     return params;
 };
 
+PredatorsCore.prototype.distance = function(v1, v2) {
+    return Math.sqrt(Math.pow(v1.x - v2.x, 2) + Math.pow(v1.y - v2.y, 2));
+};
+
+PredatorsCore.prototype.removeCoin = function(coin) {
+    for (var i = 0; i < this.coins.length; i++) {
+        if (coin.x === this.coins[i].x
+            && coin.y === this.coins[i].y) {
+            this.coins.splice(i, 1);
+            return true;
+        }
+    }
+    return false;
+};
+
 /*
  * Arrow key keycode to direction string
  * params: key (code of key pressed)

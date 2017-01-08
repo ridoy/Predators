@@ -88,3 +88,22 @@ PredatorsCore.prototype.confirmKill = function(captor, victim, clientTime, inter
         return true;
     }
 }
+
+PredatorsCore.prototype.updateLeaderboard = function() {
+    // Pick top 10 players by score
+    var players = [];
+    for (var player of this.players) {
+        players.push({
+            name: player.name,
+            score: player.score
+        });
+    }
+
+    players.sort(function(a, b) { 
+        if (a.score > b.score) return -1;
+        else if (b.score > a.score) return 1;
+        else return 0;
+    });
+
+    this.leaderboard = players.slice(0, 10);
+};

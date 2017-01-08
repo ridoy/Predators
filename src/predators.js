@@ -12,6 +12,7 @@ var PredatorsCore = function() {
     this.serverSnapshots    = []; // For client
     this.positionHistory    = []; // For server
     this.coins              = [];
+    this.leaderboard        = [];
     this.numCoins           = 50;
     this.coinRadius         = 3;
     this.scaleFactor        = 10;

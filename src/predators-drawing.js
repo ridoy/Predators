@@ -64,7 +64,6 @@ PredatorsCore.prototype.drawPlayers = function() {
 };
 
 PredatorsCore.prototype.drawLeaderboard = function() {
-    /*
     this.ctx.strokeStyle = 'rgb(0,0,0)';
     this.ctx.fillStyle = 'rgba(0,0,0, 0.1)';
     var boxX = 500;
@@ -73,10 +72,9 @@ PredatorsCore.prototype.drawLeaderboard = function() {
     this.ctx.font = '12px Arial';
     this.ctx.fillStyle = 'rgba(0,0,0,1)';
     this.ctx.strokeStyle = 'rgba(0,0,0,1)';
-    for (var i = 0; i < this.leaderboardData.length; i++) {
-        var name = this.players[i].name || 'Player';
-        var score = this.players[i].score || 0;
+    for (var i = 0; i < this.leaderboard.length; i++) {
+        var name = this.leaderboard[i].name;
+        var score = this.leaderboard[i].score;
         this.ctx.fillText(name + ' ' + score, boxX + 10, boxY + 10 + 20*i);
     }
-    */
 };

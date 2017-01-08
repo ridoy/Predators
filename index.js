@@ -134,7 +134,7 @@ io.on('connection', function(client) {
         if (player) {
             client.emit('serverUpdate', {
                 players: game.players,
-                leaderboardData: game.leaderboardData,
+                leaderboard: game.leaderboard,
                 coins:   game.coins,
                 time:    Number(new Date().getTime()),
                 canKill: player.canKill,
@@ -162,6 +162,7 @@ var updatePlayerPositions = function() {
         return player;
     });
     game.updatePositionHistory(game.players, Date.now());
+    game.updateLeaderboard();
 };
 
 var updateCoins = function() {

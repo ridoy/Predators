@@ -55,6 +55,7 @@ PredatorsCore.prototype.clientConnect = function() {
         $this.serverSnapshots.push(msg);
         $this.player.canKill = msg.canKill;
         $this.powerupExpire = msg.powerupExpire;
+        $this.leaderboard   = msg.leaderboard;
 
         // Discard oldest server update
         if ($this.serverSnapshots.length > $this.bufferSize) {

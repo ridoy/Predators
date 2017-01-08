@@ -110,6 +110,7 @@ io.on('connection', function(client) {
                 victim.y = 100;
                 victim.xVelocity = 0;
                 victim.yVelocity = 0;
+                victim.isDead = true;
 
                 player.score += 3;
             }
@@ -138,8 +139,11 @@ io.on('connection', function(client) {
                 coins:   game.coins,
                 time:    Number(new Date().getTime()),
                 canKill: player.canKill,
+                isDead: player.isDead,
                 powerupExpire: player.powerupExpire
             });
+
+            player.isDead = false;
         }
 
     }

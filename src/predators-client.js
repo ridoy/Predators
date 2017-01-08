@@ -66,8 +66,12 @@ PredatorsCore.prototype.clientConnect = function() {
         var thisPlayer = $this.findPlayer($this.id, msg.players);
         if (thisPlayer) {
             $this.score = thisPlayer.score;
-            $this.player.x = thisPlayer.x;
-            $this.player.y = thisPlayer.y;
+            if (msg.isDead) {
+                $this.player.x = thisPlayer.x;
+                $this.player.y = thisPlayer.y;
+                $this.player.xVelocity = thisPlayer.xVelocity;
+                $this.player.yVelocity = thisPlayer.yVelocity;
+            }
         }
     });
 

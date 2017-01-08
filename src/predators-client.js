@@ -15,6 +15,7 @@ PredatorsCore.prototype.clientConnect = function() {
         yVelocity: 0,
         isOnGround: false,
         keysDown: { right: false, left: false, up: false },
+        canKill: false
     };
 
     // Set up view
@@ -31,6 +32,9 @@ PredatorsCore.prototype.clientConnect = function() {
         $this.id      = msg.id;
         $this.players = msg.players;
         $this.coins   = msg.coins;
+        $this.score   = 0;
+        $this.name    = msg.name; // TODO change
+        $this.powerupExpire = null;
 
         // Resize canvas to fit map
         $this.setMap(msg.map);
@@ -49,6 +53,8 @@ PredatorsCore.prototype.clientConnect = function() {
     this.socket.on('serverUpdate', function(msg) {
         $this.coins = msg.coins;
         $this.serverSnapshots.push(msg);
+        $this.player.canKill = msg.canKill;
+        $this.powerupExpire = msg.powerupExpire;
 
         // Discard oldest server update
         if ($this.serverSnapshots.length > $this.bufferSize) {
@@ -56,10 +62,11 @@ PredatorsCore.prototype.clientConnect = function() {
         }
 
         // Update local position if different from server's record
-        var thisPlayer = $this.findPlayer($this.id);
+        var thisPlayer = $this.findPlayer($this.id, msg.players);
         if (thisPlayer) {
-            $this.x = thisPlayer.x;
-            $this.y = thisPlayer.y;
+            $this.score = thisPlayer.score;
+            $this.player.x = thisPlayer.x;
+            $this.player.y = thisPlayer.y;
         }
     });
 
@@ -100,6 +107,21 @@ PredatorsCore.prototype.sendCoinCaughtEvent = function(coin) {
         coin: coin,
         id: this.id,
         time: Date.now()
+    });
+};
+
+PredatorsCore.prototype.sendPlayerCaughtEvent = function(victimId) {
+    this.socket.emit('playerCaughtEvent', {
+        victimId: victimId,
+        id: this.id,
+        time: Date.now(),
+        interpolationDelay: this.interpolationDelay
+    });
+};
+
+PredatorsCore.prototype.sendPowerupExpireEvent = function() {
+    this.socket.emit('powerupExpireEvent', {
+        id: this.id
     });
 };
 
@@ -221,7 +243,8 @@ PredatorsCore.prototype.interpolateOtherPlayers = function() {
                 x: newPosition.x,
                 y: newPosition.y,
                 id: prevSnapshot.players[i].id,
-                keysDown: prevSnapshot.players[i].keysDown
+                keysDown: prevSnapshot.players[i].keysDown,
+                canKill: prevSnapshot.players[i].canKill
             });
         }
     }
@@ -229,14 +252,26 @@ PredatorsCore.prototype.interpolateOtherPlayers = function() {
 };
 
 PredatorsCore.prototype.checkIfTouchingCoin = function(player) {
-    if (!player.x || !player.y) {
-        return false;
-    }
+    if (!player.x || !player.y) return false;
+
     var playerPos = { x: player.x, y: player.y };
     for (var coin of this.coins) {
-        if (this.distance(playerPos, coin) < 3*this.coinRadius) {
+        if (this.distance(playerPos, coin.position) < 3*this.coinRadius) {
             this.removeCoin(coin);
             this.sendCoinCaughtEvent(coin);
+        }
+    }
+};
+
+PredatorsCore.prototype.checkIfTouchingOtherPlayer = function(player) {
+    if (!player.x || !player.y) return false;
+    if (!player.canKill) return false;
+
+    var playerPos = { x: player.x, y: player.y };
+    for (var other of this.players) {
+        var otherPos = { x: other.x, y: other.y };
+        if (this.distance(playerPos, otherPos) < 3*this.playerRadius) {
+            this.sendPlayerCaughtEvent(other.id);
         }
     }
 };
@@ -245,8 +280,15 @@ PredatorsCore.prototype.checkIfTouchingCoin = function(player) {
 PredatorsCore.prototype.clientUpdateLoop = function() {
     requestAnimationFrame(this.clientUpdateLoop.bind(this));
 
+    if (this.powerupExpire && Date.now() > this.powerupExpire) {
+        this.player.canKill = false;
+        this.powerupExpire  = null;
+        this.sendPowerupExpireEvent();
+    }
+
     this.updatePlayerPosition(this.player);
     this.checkIfTouchingCoin(this.player);
+    this.checkIfTouchingOtherPlayer(this.player);
     this.interpolateOtherPlayers();
     this.draw();
 };

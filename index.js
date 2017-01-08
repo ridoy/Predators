@@ -43,21 +43,27 @@ io.on('connection', function(client) {
     // Generate unique ID for this client
     client.id = uuid.v1();
 
-    game.players.push({
+    var player = {
         id: client.id,
+        name: client.id,
         x: 100,
         y: 100,
         xVelocity: 0,
         yVelocity: 0,
         keysDown: {},
-        score: 0
-    });
+        score: 0,
+        canKill: false
+    };
+
+    // Add new player to game
+    game.players.push(player);
 
     console.log('New friend connected!\nPlayers online:\n' + game.players);
 
     // Send this player their id and a list of players
     client.emit('connected', {
         id: client.id,
+        name: client.id,
         map: game.map,
         players: game.players,
         coins: game.coins
@@ -71,18 +77,49 @@ io.on('connection', function(client) {
         }
     });
 
-    // Handle when a player catches a coin
+    // Handle when this player catches a coin
     client.on('coinCaughtEvent', function(msg) {
         var player = game.findPlayer(msg.id);
-        if (player) {
-            game.removeCoin(msg.coin);
+        if (!player) return;
+        game.removeCoin(msg.coin);
+        if (msg.coin.type === 'normal') {
             player.score += 1;
-            console.log(player.score);
+        } else if (msg.coin.type === 'powerup') {
+            game.activateKillPower(player);
         }
+    });
+
+    client.on('powerupExpireEvent', function(msg) {
+        var player = game.findPlayer(msg.id);
+        if (!player) return;
+
+        player.canKill = false;
+    });
+
+    // Handle when this player catches another player
+    client.on('playerCaughtEvent', function(msg) {
+        // Rewind position history and confirm that kill was made
+        // If so, reset victim player's score
+        // and update captor's score
+        var player = game.findPlayer(msg.id);
+        var victim = game.findPlayer(msg.victimId);
+        if (player && victim) {
+            if (game.confirmKill(player, victim, msg.time, msg.interpolationDelay)) {
+                victim.score = 0;
+                victim.x = 100;
+                victim.y = 100;
+                victim.xVelocity = 0;
+                victim.yVelocity = 0;
+
+                player.score += 3;
+            }
+        }
+
     });
 
     // Remove this player from game when disconnected
     client.on('disconnect', function() {
+        clearInterval(sendUpdateToClient);
         for (var i = 0; i < game.players.length; i++) {
             if (game.players[i].id === client.id) {
                 game.players.splice(i, 1);
@@ -93,11 +130,18 @@ io.on('connection', function(client) {
     });
 
     function sendUpdateToClient() {
-        client.emit('serverUpdate', {
-            players: game.players,
-            coins:   game.coins,
-            time:    Number(new Date().getTime())
-        });
+        var player = game.findPlayer(client.id);
+        if (player) {
+            client.emit('serverUpdate', {
+                players: game.players,
+                leaderboardData: game.leaderboardData,
+                coins:   game.coins,
+                time:    Number(new Date().getTime()),
+                canKill: player.canKill,
+                powerupExpire: player.powerupExpire
+            });
+        }
+
     }
 
 
@@ -117,6 +161,7 @@ var updatePlayerPositions = function() {
 
         return player;
     });
+    game.updatePositionHistory(game.players, Date.now());
 };
 
 var updateCoins = function() {

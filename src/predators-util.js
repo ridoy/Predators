@@ -35,8 +35,8 @@ PredatorsCore.prototype.distance = function(v1, v2) {
 
 PredatorsCore.prototype.removeCoin = function(coin) {
     for (var i = 0; i < this.coins.length; i++) {
-        if (coin.x === this.coins[i].x
-            && coin.y === this.coins[i].y) {
+        if (coin.position.x === this.coins[i].position.x
+            && coin.position.y === this.coins[i].position.y) {
             this.coins.splice(i, 1);
             return true;
         }
@@ -114,10 +114,13 @@ PredatorsCore.prototype.isInWall = function(x, y) {
 /*
  * Finds player by id
  * params: id (id of target player)
+ *         (optional) players (array of players to search)
  * return: target player if player exists, else null
  */
-PredatorsCore.prototype.findPlayer = function(id) {
-    for (var player of this.players) {
+PredatorsCore.prototype.findPlayer = function(id, players) {
+    if (!players) var players = this.players;
+
+    for (var player of players) {
         if (player.id === id) {
             return player;
         }
